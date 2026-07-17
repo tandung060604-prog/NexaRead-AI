@@ -1,0 +1,42 @@
+{
+  "name": "nexaread-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.14.6",
+    "framer-motion": "^12.42.2",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.17.0",
+    "lucide-react": "^1.24.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.2",
+    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/react": "16.3.2",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^24.0.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "6.0.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
+    "tailwindcss": "4.3.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "overrides": {
+    "postcss": "8.5.19"
+  }
+}
