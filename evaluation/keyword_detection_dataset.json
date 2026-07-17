@@ -1,0 +1,64 @@
+{
+  "version": "2026.07-v1",
+  "keywords": [
+    {"number": 1, "slug": "python", "canonical_name": "Python", "aliases": ["Python 3"]},
+    {"number": 2, "slug": "react", "canonical_name": "React", "aliases": ["React.js"], "required_any": ["library", "component", "JavaScript", "frontend", "UI"]},
+    {"number": 3, "slug": "postgresql", "canonical_name": "PostgreSQL", "aliases": ["Postgres"]},
+    {"number": 5, "slug": "machine-learning", "canonical_name": "Machine learning", "aliases": ["ML", "học máy"]},
+    {"number": 8, "slug": "large-language-model", "canonical_name": "Large language model", "aliases": ["LLM", "mô hình ngôn ngữ lớn"]},
+    {"number": 10, "slug": "ai-agent", "canonical_name": "AI agent", "aliases": ["agent"], "required_any": ["AI", "model", "tool", "planning", "action", "LLM"]},
+    {"number": 14, "slug": "data-pipeline", "canonical_name": "Data pipeline", "aliases": ["pipeline"], "required_any": ["data", "ETL", "workflow", "batch", "stream"]},
+    {"number": 21, "slug": "transformer", "canonical_name": "Transformer", "aliases": ["transformer model"], "required_any": ["model", "attention", "neural", "language", "embedding"]}
+  ],
+  "cases": [
+    {
+      "id": "exact-technical",
+      "group": "true_term",
+      "reader_level": "BEGINNER",
+      "text": "Python stores application data in PostgreSQL.",
+      "expected_slugs": ["python", "postgresql"]
+    },
+    {
+      "id": "aliases",
+      "group": "alias",
+      "reader_level": "BEGINNER",
+      "text": "Python 3 connects to Postgres for durable storage.",
+      "expected_slugs": ["python", "postgresql"]
+    },
+    {
+      "id": "ambiguous-common-negative",
+      "group": "ambiguous_negative",
+      "reader_level": "BEGINNER",
+      "text": "The travel agent watched a transformer and pipeline shipment while people react calmly.",
+      "expected_slugs": []
+    },
+    {
+      "id": "ambiguous-technical-context",
+      "group": "context_rule",
+      "reader_level": "ADVANCED",
+      "text": "An AI agent calls a tool. A Transformer model uses attention. The data pipeline runs an ETL batch.",
+      "expected_slugs": ["ai-agent", "transformer", "data-pipeline"]
+    },
+    {
+      "id": "vietnamese-english",
+      "group": "bilingual",
+      "reader_level": "INTERMEDIATE",
+      "text": "Học máy có thể huấn luyện một mô hình ngôn ngữ lớn, còn ML mô tả cùng một lĩnh vực.",
+      "expected_slugs": ["machine-learning", "large-language-model"]
+    },
+    {
+      "id": "frontend-context",
+      "group": "common_word_guard",
+      "reader_level": "BEGINNER",
+      "text": "React is a JavaScript library for reusable UI components.",
+      "expected_slugs": ["react"]
+    },
+    {
+      "id": "ordinary-language-negative",
+      "group": "negative",
+      "reader_level": "BEGINNER",
+      "text": "The team discussed schedules, colors, lunch, and meeting rooms.",
+      "expected_slugs": []
+    }
+  ]
+}

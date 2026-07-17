@@ -1,0 +1,100 @@
+{
+  "taxonomy_version": "2026.07-v1",
+  "generated_at": "2026-07-17T04:30:53.538040+00:00",
+  "dataset_cases": 7,
+  "metrics": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "false_highlights_per_1000_words": 0.0,
+    "correction_rate": 0.0,
+    "average_highlights_per_section": 1.4286
+  },
+  "gates": {
+    "precision_at_least_0_90": true,
+    "recall_at_least_0_80": true,
+    "all_negative_cases_clean": true
+  },
+  "passed": true,
+  "cases": [
+    {
+      "id": "exact-technical",
+      "group": "true_term",
+      "expected": [
+        "postgresql",
+        "python"
+      ],
+      "predicted": [
+        "postgresql",
+        "python"
+      ],
+      "passed": true
+    },
+    {
+      "id": "aliases",
+      "group": "alias",
+      "expected": [
+        "postgresql",
+        "python"
+      ],
+      "predicted": [
+        "postgresql",
+        "python"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ambiguous-common-negative",
+      "group": "ambiguous_negative",
+      "expected": [],
+      "predicted": [],
+      "passed": true
+    },
+    {
+      "id": "ambiguous-technical-context",
+      "group": "context_rule",
+      "expected": [
+        "ai-agent",
+        "data-pipeline",
+        "transformer"
+      ],
+      "predicted": [
+        "ai-agent",
+        "data-pipeline",
+        "transformer"
+      ],
+      "passed": true
+    },
+    {
+      "id": "vietnamese-english",
+      "group": "bilingual",
+      "expected": [
+        "large-language-model",
+        "machine-learning"
+      ],
+      "predicted": [
+        "large-language-model",
+        "machine-learning"
+      ],
+      "passed": true
+    },
+    {
+      "id": "frontend-context",
+      "group": "common_word_guard",
+      "expected": [
+        "react"
+      ],
+      "predicted": [
+        "react"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ordinary-language-negative",
+      "group": "negative",
+      "expected": [],
+      "predicted": [],
+      "passed": true
+    }
+  ]
+}
