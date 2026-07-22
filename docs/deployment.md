@@ -2,7 +2,7 @@
 
 ## Environments
 
-Use isolated development, staging, and production projects. Never share databases, Redis, object buckets, API keys, or owner identifiers across environments. Staging deploys automatically from `main`; production is a manual workflow dispatch protected by the GitHub `production` environment approval rule.
+Use isolated development, staging, and production projects. Never share databases, Redis, object buckets, API keys, or owner identifiers across environments. Staging deploys only after CI succeeds on `main`; when cloud secrets or variables are absent, the workflow records a notice and skips deployment instead of failing. Production is a manual workflow dispatch protected by the GitHub `production` environment approval rule.
 
 ## Services
 
@@ -19,8 +19,10 @@ Set every variable documented in `.env.example`. Production additionally require
 
 GitHub environments require:
 
-- Secrets: `RAILWAY_TOKEN`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and the relevant Vercel project ID.
-- Variables: `STAGING_API_URL` and `PRODUCTION_API_URL`.
+- Staging secrets: `RAILWAY_TOKEN`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_STAGING_PROJECT_ID`.
+- Staging variable: `STAGING_API_URL`.
+- Production secrets: `RAILWAY_TOKEN`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PRODUCTION_PROJECT_ID`.
+- Production variable: `PRODUCTION_API_URL`.
 - A required reviewer on the `production` environment.
 
 ## Release gate
