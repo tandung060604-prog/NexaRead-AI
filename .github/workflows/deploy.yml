@@ -49,11 +49,11 @@ jobs:
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.preflight.outputs.configured == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.preflight.outputs.configured == 'true'
         with:
           node-version: "22"
@@ -110,8 +110,8 @@ jobs:
             echo "::error title=Production configuration missing::${missing[*]}"
             exit 1
           fi
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Deploy backend

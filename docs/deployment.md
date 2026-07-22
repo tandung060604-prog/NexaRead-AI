@@ -27,7 +27,7 @@ GitHub environments require:
 
 ## Release gate
 
-CI must pass backend lint/type/tests, frontend lint/type/tests/build, migration dry-run, backend image build and high/critical container scan, and `evaluation/run_release_evaluation.py`. Store the release report artifact with the commit SHA. Product/adoption metrics remain unavailable until staging telemetry is connected and must not be invented.
+CI must pass backend lint/type/tests, frontend lint/type/tests/build, migration dry-run, backend image build, full high/critical container report, and a blocking scan for fixable high/critical vulnerabilities, and `evaluation/run_release_evaluation.py`. Store the release report artifact with the commit SHA. Product/adoption metrics remain unavailable until staging telemetry is connected and must not be invented.
 
 ## Deployment sequence
 
