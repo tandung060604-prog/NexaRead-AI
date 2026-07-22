@@ -7,8 +7,10 @@ describe("HomePage", () => {
   it("renders the product name and upload link", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: "NexaRead AI" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Upload a PDF" })).toHaveAttribute(
+    expect(
+      screen.getByRole("heading", { name: /Enter your private digital library/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Upload Document" })).toHaveAttribute(
       "href",
       "/upload",
     );

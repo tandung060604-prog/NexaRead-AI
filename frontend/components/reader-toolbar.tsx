@@ -7,12 +7,12 @@ import {
   Maximize,
   Minimize,
   Scroll,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useReadingRoom } from "./reading-room-provider";
-import { AudioMixer } from "./audio-mixer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -159,21 +159,19 @@ export function ReaderToolbar({
             >
               <BookOpen size={16} />
             </button>
+            <button
+              aria-label="Original PDF"
+              aria-pressed={readingMode === "pdf"}
+              className="grid size-9 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
+              onClick={() => setReadingMode("pdf")}
+              title="Original PDF"
+              type="button"
+            >
+              <FileText size={16} />
+            </button>
           </div>
 
-          {/* Room selector */}
-          <button
-            aria-label="Change reading room"
-            className="grid size-10 place-items-center rounded-lg border border-[var(--reader-border)] bg-[var(--reader-surface)] transition-colors hover:bg-[var(--reader-surface-muted)]"
-            onClick={() => setRoomSelectorOpen(true)}
-            title={`Room: ${room.name}`}
-            type="button"
-          >
-            🏠
-          </button>
 
-          {/* Audio mixer */}
-          <AudioMixer />
 
           {/* Focus mode */}
           <button

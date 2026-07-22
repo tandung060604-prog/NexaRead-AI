@@ -1,0 +1,73 @@
+{
+  "release": "local",
+  "commit": "2cb11095895ff388548d40a103abf35fa7132089",
+  "dataset_versions": {
+    "rag": "2026.07-v1",
+    "keywords": "2026.07-v1",
+    "parser": "2026.07-m7-v1",
+    "security": "2026.07-security-v1"
+  },
+  "model": "local-extractive-answer-v1",
+  "embedding": "local-hash-embedding-v1",
+  "parser": "nexaread-normalized-parser-v1",
+  "metrics": {
+    "rag": {
+      "retrieval_recall_at_3": 1.0,
+      "context_precision_at_3": 0.7,
+      "citation_accuracy": 0.8,
+      "citation_coverage": 0.8,
+      "faithfulness": 1.0,
+      "answer_relevance": 0.5675,
+      "no_answer_accuracy": 1.0,
+      "latency_p50_ms": 0.812,
+      "latency_p95_ms": 34.337,
+      "prompt_tokens": 747,
+      "completion_tokens": 95,
+      "cost_microusd": 0
+    },
+    "keywords": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_highlights_per_1000_words": 0.0,
+      "correction_rate": 0.0,
+      "average_highlights_per_section": 1.4286
+    },
+    "parser": {
+      "success_rate": 1.0,
+      "block_order_accuracy": 1.0,
+      "latency_p50_ms": 58.507,
+      "latency_max_ms": 60.802,
+      "total_latency_ms": 132.773
+    },
+    "security": {
+      "control_pass_rate": 1.0
+    },
+    "product": "not_measured_without_staging_telemetry"
+  },
+  "latency": {
+    "rag_p50_ms": 0.812,
+    "rag_p95_ms": 34.337,
+    "parser_p50_ms": 58.507,
+    "parser_max_ms": 60.802
+  },
+  "cost": {
+    "prompt_tokens": 747,
+    "completion_tokens": 95,
+    "cost_microusd": 0
+  },
+  "gates": {
+    "rag_cases": true,
+    "keyword": true,
+    "parser_cases": true,
+    "security_cases": true
+  },
+  "passed": true,
+  "known_limitations": [
+    "OCR is not implemented for scanned PDFs.",
+    "Complex document layout reconstruction remains heuristic.",
+    "Product adoption metrics require staging or production telemetry.",
+    "This report does not prove a production deployment occurred."
+  ],
+  "timestamp": "2026-07-22T04:10:41.725529+00:00"
+}

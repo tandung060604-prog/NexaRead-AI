@@ -2,6 +2,7 @@
 
 import type { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
 import type { BlockSelection } from "./reader-block";
+import { motion } from "framer-motion";
 
 import { BookPage } from "./book-page";
 
@@ -10,6 +11,10 @@ import { BookPage } from "./book-page";
 // ---------------------------------------------------------------------------
 
 type PageSpreadProps = {
+  /** The direction of the page turn (1 for next, -1 for prev). */
+  direction?: number;
+  /** Whether the animation should play. */
+  animationEnabled?: boolean;
   /** Left page blocks (empty array if this is page 1 in a pair). */
   leftBlocks: ContentBlock[];
   /** Right page blocks. */
@@ -74,6 +79,8 @@ export function PageSpread({
   onBookmark,
   onSelection,
   onKeywordSelect,
+  animationEnabled,
+  direction,
 }: PageSpreadProps) {
   const sharedProps = {
     pageColor,
@@ -108,10 +115,36 @@ export function PageSpread({
   // Desktop: two-page spread
   const showRight = rightPageNumber <= totalPages;
 
+  // Realistic page flip animations
+  // When going next (direction = 1), the new left page flips in from the right.
+  // When going prev (direction = -1), the new right page flips in from the left.
+  const isAnimatingLeft = animationEnabled && direction === 1;
+  const isAnimatingRight = animationEnabled && direction === -1;
+
+  const leftVariants = {
+    initial: { rotateY: 90, opacity: 0, filter: "brightness(0.7)", zIndex: 10 },
+    animate: { rotateY: 0, opacity: 1, filter: "brightness(1)", zIndex: 10 },
+  };
+
+  const rightVariants = {
+    initial: { rotateY: -90, opacity: 0, filter: "brightness(0.7)", zIndex: 10 },
+    animate: { rotateY: 0, opacity: 1, filter: "brightness(1)", zIndex: 10 },
+  };
+
   return (
-    <div className="mx-auto flex w-full max-w-[1200px] items-stretch justify-center">
+    <div className="mx-auto flex w-full max-w-[1200px] items-stretch justify-center relative shadow-[0_30px_60px_rgba(0,0,0,0.4)] rounded-md perspective-[2500px]">
+      {/* Book Underlay / Cover Base */}
+      <div className="absolute inset-0 -bottom-2 -top-2 -left-3 -right-3 -z-10 rounded-lg bg-[var(--surface-muted)] shadow-xl hidden lg:block" />
+
       {/* Left page */}
-      <div className="w-1/2 max-w-[580px]">
+      <motion.div
+        key={`left-${leftPageNumber}`}
+        className="w-1/2 max-w-[580px] relative z-10 origin-right"
+        initial={isAnimatingLeft ? "initial" : false}
+        animate="animate"
+        variants={isAnimatingLeft ? leftVariants : undefined}
+        transition={{ type: "tween", duration: 0.5, ease: "easeOut" }}
+      >
         <BookPage
           {...sharedProps}
           animationClass={animatingSide === "left" ? animationClass : ""}
@@ -119,13 +152,25 @@ export function PageSpread({
           pageNumber={leftPageNumber}
           position="left"
         />
-      </div>
+        {/* Shadow cast by spine onto left page */}
+        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/20 to-transparent pointer-events-none" />
+      </motion.div>
 
       {/* Book spine */}
-      <div className="book-spine" />
+      <div className="w-[4px] sm:w-[8px] bg-gradient-to-r from-black/40 via-white/20 to-black/40 z-20 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" />
 
       {/* Right page */}
-      <div className="w-1/2 max-w-[580px]">
+      <motion.div
+        key={`right-${rightPageNumber}`}
+        className="w-1/2 max-w-[580px] relative z-10 origin-left"
+        initial={isAnimatingRight ? "initial" : false}
+        animate="animate"
+        variants={isAnimatingRight ? rightVariants : undefined}
+        transition={{ type: "tween", duration: 0.5, ease: "easeOut" }}
+      >
+        {/* Shadow cast by spine onto right page */}
+        <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/20 to-transparent pointer-events-none z-10" />
+
         {showRight ? (
           <BookPage
             {...sharedProps}
@@ -136,7 +181,7 @@ export function PageSpread({
           />
         ) : (
           <div
-            className="book-page flex min-h-[70vh] items-center justify-center"
+            className="book-page flex min-h-[70vh] h-full items-center justify-center"
             style={{
               borderRadius: "0 4px 4px 0",
               "--room-page-color": pageColor,
@@ -145,7 +190,7 @@ export function PageSpread({
             <p className="text-sm text-[var(--reader-muted)]">End of document</p>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

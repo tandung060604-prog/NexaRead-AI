@@ -11,21 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.config import get_settings
 from app.db.session import async_session_factory
 from app.models.document import ContentBlock, Document, DocumentVersion, Page, ProcessingJob
+from app.models.rag import Chunk
+from app.services.document_parser import DocumentParseError, PdfNeedsOcrError, parse_document
 from app.services.keyword_detection import detect_keywords_for_version
-from app.services.pdf_parser import ParsedPdf, PdfNeedsOcrError, PdfParseError, parse_pdf
+from app.services.normalized_document import NormalizedDocument
+from app.services.rag_chunking import index_document_version
+from app.services.rag_providers import EmbeddingProvider, get_embedding_provider
 from app.services.storage import StorageError, StorageService, get_storage_service
 
 logger = logging.getLogger(__name__)
 
 SessionFactory = async_sessionmaker[AsyncSession]
-Parser = Callable[[bytes], ParsedPdf]
-
-
-def parse_pdf_with_settings(pdf_bytes: bytes) -> ParsedPdf:
-    return parse_pdf(
-        pdf_bytes,
-        minimum_text_characters=get_settings().min_extracted_text_characters,
-    )
+Parser = Callable[[bytes], NormalizedDocument]
 
 
 async def _load_entities(
@@ -66,6 +63,7 @@ async def _set_stage(
 
 
 async def _clear_extraction(session: AsyncSession, version_id: UUID) -> None:
+    await session.execute(delete(Chunk).where(Chunk.document_version_id == version_id))
     await session.execute(
         delete(ContentBlock).where(ContentBlock.document_version_id == version_id)
     )
@@ -89,9 +87,9 @@ async def _finish_without_content(
     job.progress = 100
     job.error_code = error_code
     job.error_message = (
-        "This PDF requires OCR, which is not supported yet."
+        "This document requires OCR, which is not supported yet."
         if status == "OCR_REQUIRED"
-        else "The PDF could not be processed."
+        else "The document could not be processed."
     )
     job.completed_at = datetime.now(UTC)
     await session.commit()
@@ -102,7 +100,8 @@ async def _replace_extraction(
     document: Document,
     version: DocumentVersion,
     job: ProcessingJob,
-    parsed: ParsedPdf,
+    parsed: NormalizedDocument,
+    embedding_provider: EmbeddingProvider,
 ) -> None:
     await _clear_extraction(session, version.id)
     page_ids: dict[int, UUID] = {}
@@ -156,12 +155,20 @@ async def _replace_extraction(
 
     await session.flush()
     await detect_keywords_for_version(session, document.id, version.id)
+    await index_document_version(
+        session,
+        document_id=document.id,
+        document_version_id=version.id,
+        embedding_provider=embedding_provider,
+    )
 
     version.page_count = parsed.page_count
     version.pdf_metadata = parsed.metadata
     version.pdf_outline = parsed.outline
-    document.status = "READABLE"
-    job.status = "READABLE"
+    detected_layout = str(parsed.metadata.get("layout_type", "GENERAL_DOCUMENT"))
+    document.layout_type = document.layout_override or detected_layout
+    document.status = "AI_READY"
+    job.status = "AI_READY"
     job.progress = 100
     job.error_code = None
     job.error_message = None
@@ -176,9 +183,11 @@ async def process_document_version(
     *,
     storage: StorageService | None = None,
     session_factory: SessionFactory = async_session_factory,
-    parser: Parser = parse_pdf_with_settings,
+    parser: Parser | None = None,
+    embedding_provider: EmbeddingProvider | None = None,
 ) -> None:
     storage = storage or get_storage_service()
+    embedding_provider = embedding_provider or get_embedding_provider()
     async with session_factory() as session:
         entities = await _load_entities(session, document_id, version_id, job_id)
         if entities is None:
@@ -186,18 +195,36 @@ async def process_document_version(
         document, version, job = entities
         await _set_stage(session, document, job, "EXTRACTING", 15)
         try:
-            pdf_bytes = await storage.download(version.storage_key)
-            parsed = await asyncio.to_thread(parser, pdf_bytes)
+            document_bytes = await storage.download(version.storage_key)
+            if parser is not None:
+                parse_task = asyncio.to_thread(parser, document_bytes)
+            else:
+                settings = get_settings()
+                parse_task = asyncio.to_thread(
+                    parse_document,
+                    document_bytes,
+                    document.source_type,
+                    source_url=document.source_url,
+                    minimum_text_characters=settings.min_extracted_text_characters,
+                )
+            parsed = await asyncio.wait_for(
+                parse_task, timeout=get_settings().parser_timeout_seconds
+            )
         except PdfNeedsOcrError as exc:
             await _finish_without_content(session, document, version, job, "OCR_REQUIRED", exc.code)
             return
-        except PdfParseError as exc:
+        except DocumentParseError as exc:
             await _finish_without_content(session, document, version, job, "FAILED", exc.code)
+            return
+        except TimeoutError:
+            await _finish_without_content(
+                session, document, version, job, "FAILED", "PARSER_TIMEOUT"
+            )
             return
 
         await _set_stage(session, document, job, "STRUCTURING", 65)
         try:
-            await _replace_extraction(session, document, version, job, parsed)
+            await _replace_extraction(session, document, version, job, parsed, embedding_provider)
         except SQLAlchemyError:
             await session.rollback()
             raise
@@ -219,7 +246,7 @@ async def mark_processing_failed(
         job.status = "FAILED"
         job.progress = 100
         job.error_code = "PROCESSING_FAILED"
-        job.error_message = "The PDF could not be processed."
+        job.error_message = "The document could not be processed."
         job.completed_at = datetime.now(UTC)
         try:
             await session.commit()

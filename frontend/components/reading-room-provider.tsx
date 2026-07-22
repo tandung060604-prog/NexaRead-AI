@@ -160,7 +160,7 @@ export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
 
   return (
     <ReadingRoomContext.Provider value={value}>
-      <div className="reading-room" style={roomStyle}>
+      <div className="reading-room" style={roomStyle} suppressHydrationWarning>
         {children}
       </div>
     </ReadingRoomContext.Provider>

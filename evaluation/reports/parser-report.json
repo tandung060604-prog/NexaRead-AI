@@ -1,0 +1,48 @@
+{
+  "dataset_version": "2026.07-m7-v1",
+  "generated_at": "2026-07-22T04:10:36.295875+00:00",
+  "case_count": 3,
+  "passed": 3,
+  "metrics": {
+    "success_rate": 1.0,
+    "block_order_accuracy": 1.0,
+    "latency_p50_ms": 58.507,
+    "latency_max_ms": 60.802,
+    "total_latency_ms": 132.773
+  },
+  "cases": [
+    {
+      "id": "docx",
+      "passed": true,
+      "checks": {
+        "block_order": true,
+        "metadata": true,
+        "content_non_empty": true,
+        "stable_sequences": true
+      },
+      "latency_ms": 60.802
+    },
+    {
+      "id": "epub",
+      "passed": true,
+      "checks": {
+        "block_order": true,
+        "metadata": true,
+        "content_non_empty": true,
+        "stable_sequences": true
+      },
+      "latency_ms": 58.507
+    },
+    {
+      "id": "url",
+      "passed": true,
+      "checks": {
+        "block_order": true,
+        "metadata": true,
+        "content_non_empty": true,
+        "stable_sequences": true
+      },
+      "latency_ms": 13.411
+    }
+  ]
+}

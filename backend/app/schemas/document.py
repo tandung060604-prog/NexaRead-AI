@@ -33,8 +33,11 @@ class DocumentResponse(BaseModel):
     title: str
     original_filename: str
     source_type: str
+    source_url: str | None
     mime_type: str
     file_size: int
+    layout_type: str
+    layout_override: str | None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -56,12 +59,36 @@ class DocumentListResponse(BaseModel):
 
 
 class DocumentUpdate(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    layout_override: str | None = None
 
     @field_validator("title")
     @classmethod
-    def normalize_title(cls, value: str) -> str:
+    def normalize_title(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         normalized = " ".join(value.split())
         if not normalized:
             raise ValueError("Title must not be empty")
         return normalized
+
+    @field_validator("layout_override")
+    @classmethod
+    def validate_layout_override(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().upper()
+        allowed = {
+            "BOOK",
+            "PAPER",
+            "TECHNICAL_DOCUMENTATION",
+            "BLOG_ARTICLE",
+            "GENERAL_DOCUMENT",
+        }
+        if normalized not in allowed:
+            raise ValueError("Unsupported layout type")
+        return normalized
+
+
+class UrlImportRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)

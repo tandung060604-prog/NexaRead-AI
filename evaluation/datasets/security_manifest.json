@@ -1,0 +1,14 @@
+{
+  "dataset_version": "2026.07-security-v1",
+  "categories": ["upload", "ssrf", "html_sanitization", "prompt_injection"],
+  "cases": [
+    "reject_executable_upload",
+    "reject_file_protocol",
+    "reject_loopback",
+    "reject_link_local_metadata",
+    "reject_private_network",
+    "allow_public_http_target",
+    "strip_active_html",
+    "reject_secret_exfiltration_prompt"
+  ]
+}

@@ -15,3 +15,32 @@ async def test_health_endpoint() -> None:
         "status": "healthy",
         "service": "nexaread-api",
     }
+
+
+@pytest.mark.anyio
+async def test_liveness_endpoint() -> None:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health/live")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+
+
+@pytest.mark.anyio
+async def test_readiness_reports_dependency_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def healthy() -> None:
+        return None
+
+    async def unhealthy() -> None:
+        raise RuntimeError("not ready")
+
+    monkeypatch.setattr("app.api.routes.health.check_database_connection", healthy)
+    monkeypatch.setattr("app.api.routes.health.check_redis_connection", unhealthy)
+    monkeypatch.setattr("app.api.routes.health.ensure_storage_ready", healthy)
+    monkeypatch.setattr("app.api.routes.health.check_migration_current", healthy)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health/ready")
+    assert response.status_code == 503
+    assert response.json()["status"] == "unhealthy"
+    assert response.json()["checks"]["redis_queue"] == "unhealthy"

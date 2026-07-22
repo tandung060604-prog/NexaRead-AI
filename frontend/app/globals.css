@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light;
-  --background: #f7f8f5;
-  --foreground: #18201d;
-  --surface: #ffffff;
-  --surface-muted: #edf0ee;
-  --muted: #66716c;
-  --border: #dce2de;
-  --border-strong: #aeb9b3;
-  --accent: #116b4b;
-  --accent-strong: #0b5038;
-  --accent-soft: #e5f2ec;
-  --danger: #b42318;
-  --danger-soft: #fff0ee;
-  --notice: #9a6700;
-  --notice-soft: #fff7d6;
+  color-scheme: dark;
+  --background: #0f1115;
+  --foreground: #f0f2f5;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-muted: rgba(255, 255, 255, 0.02);
+  --muted: #8b949e;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --accent: #5e6ad2;
+  --accent-strong: #7b86e8;
+  --accent-soft: rgba(94, 106, 210, 0.15);
+  --danger: #f85149;
+  --danger-soft: rgba(248, 81, 73, 0.1);
+  --notice: #d29922;
+  --notice-soft: rgba(210, 153, 34, 0.1);
   --highlight: #ffd66b;
-  --highlight-soft: #fff4c2;
+  --highlight-soft: rgba(255, 214, 107, 0.1);
   --search-highlight: #ffd66b;
-  --code: #f1f3f2;
+  --code: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -97,27 +97,28 @@ a {
   padding: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   IMMERSIVE READING ENVIRONMENT — Design Tokens & Animations
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* --- Room Tokens (set dynamically by ReadingRoomProvider) --- */
-.reading-room {
-  --room-page-color: #ffffff;
-  --room-page-texture-opacity: 0;
-  --room-shadow-color: rgba(0, 0, 0, 0.12);
-  --room-overlay-opacity: 0;
-  --room-accent: var(--reader-accent);
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-/* --- Page Surface --- */
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reading Room & Book Physical Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .book-page {
-  background: var(--room-page-color, #ffffff);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.06),
-    0 4px 16px var(--room-shadow-color);
+  background-color: var(--room-page-color, #ffffff);
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.03) 0%, transparent 5%, transparent 95%, rgba(0,0,0,0.03) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.02);
   position: relative;
-  overflow: hidden;
 }
 
 .book-page::before {
@@ -131,8 +132,67 @@ a {
     rgba(0, 0, 0, 0.012) 28px,
     rgba(0, 0, 0, 0.012) 29px
   );
-  opacity: var(--room-page-texture-opacity, 0);
-  pointer-events: none;
+  opacity: var(--room-page-texture-opacity, 0.04);
+  mix-blend-mode: multiply;
+  z-index: 10;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Room Background Animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Cozy Library: Warm glowing dust particles */
+.room-bg-cozy-library {
+  background: radial-gradient(circle at 50% 50%, #2a1a15 0%, #0f0a08 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.room-bg-cozy-library::before, .room-bg-cozy-library::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, #ffb27f, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, #ffb27f, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #ffb27f, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: dustDrift 20s linear infinite;
+  opacity: 0.3;
+}
+.room-bg-cozy-library::after {
+  background-size: 300px 300px;
+  animation-delay: -10s;
+  animation-duration: 30s;
+  opacity: 0.15;
+}
+
+@keyframes dustDrift {
+  from { transform: translateY(0) translateX(0); }
+  to { transform: translateY(-200px) translateX(50px); }
+}
+
+/* Rainy Window: Dark cool tones with rain overlay */
+.room-bg-rainy-window {
+  background: linear-gradient(to bottom, #1a2a3a, #0a1118);
+  position: relative;
+}
+.room-bg-rainy-window::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(to bottom, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.05) 50%, transparent 50%);
+  background-size: 100% 4px;
+  animation: rainScan 1s linear infinite;
+}
+
+@keyframes rainScan {
+  from { transform: translateY(0); }
+  to { transform: translateY(4px); }
 }
 
 /* --- Book Spine --- */

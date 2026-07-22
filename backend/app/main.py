@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import get_settings
+from app.core.observability import RequestLoggingMiddleware, configure_observability
 from app.db.session import check_database_connection, dispose_database_engine
 from app.services.redis import check_redis_connection, close_redis_client
 from app.services.storage import ensure_storage_ready
@@ -22,12 +23,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 settings = get_settings()
+configure_observability()
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_url],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-Request-ID"],
+    expose_headers=["X-Request-ID"],
 )
 app.include_router(api_router)

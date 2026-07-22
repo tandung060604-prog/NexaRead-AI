@@ -60,7 +60,7 @@ async def test_processing_status(api_context: ApiTestContext) -> None:
     readable = await api_context.client.get(f"/api/documents/{document_id}/processing-status")
 
     assert queued.json()["status"] == "QUEUED"
-    assert readable.json()["status"] == "READABLE"
+    assert readable.json()["status"] == "AI_READY"
     assert readable.json()["progress"] == 100
     assert readable.json()["page_count"] == 1
 

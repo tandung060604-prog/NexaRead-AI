@@ -43,7 +43,7 @@ async def _get_owned_version(
 
 
 def _require_readable(document: Document) -> None:
-    if document.status != "READABLE":
+    if document.status not in {"READABLE", "AI_READY"}:
         raise DocumentNotReadableError(document.status)
 
 
@@ -195,9 +195,13 @@ async def get_original_pdf(
     storage: StorageService,
     document_id: UUID,
     owner_id: str,
-) -> tuple[bytes, str]:
+) -> tuple[bytes, str, str]:
     document, version = await _get_owned_version(session, document_id, owner_id)
-    return await storage.download(version.storage_key), document.original_filename
+    return (
+        await storage.download(version.storage_key),
+        document.original_filename,
+        document.mime_type,
+    )
 
 
 async def get_protected_block_image(

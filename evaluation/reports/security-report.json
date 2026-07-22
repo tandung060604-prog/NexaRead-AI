@@ -1,0 +1,43 @@
+{
+  "dataset_version": "2026.07-security-v1",
+  "generated_at": "2026-07-22T04:10:38.909177+00:00",
+  "case_count": 8,
+  "passed": 8,
+  "metrics": {
+    "control_pass_rate": 1.0
+  },
+  "cases": [
+    {
+      "id": "reject_executable_upload",
+      "passed": true
+    },
+    {
+      "id": "ssrf_1",
+      "passed": true
+    },
+    {
+      "id": "ssrf_2",
+      "passed": true
+    },
+    {
+      "id": "ssrf_3",
+      "passed": true
+    },
+    {
+      "id": "ssrf_4",
+      "passed": true
+    },
+    {
+      "id": "allow_public_target",
+      "passed": true
+    },
+    {
+      "id": "sanitize_active_html",
+      "passed": true
+    },
+    {
+      "id": "reject_secret_exfiltration_prompt",
+      "passed": true
+    }
+  ]
+}

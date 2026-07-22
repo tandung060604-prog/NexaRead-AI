@@ -169,7 +169,7 @@ describe("ReaderBlock", () => {
     expect(image).toHaveAttribute("loading", "lazy");
     expect(image).toHaveAttribute(
       "src",
-      `http://localhost:8000/api/documents/content-blocks/${block.id}/image`,
+      `/api/documents/content-blocks/${block.id}/image`,
     );
   });
 

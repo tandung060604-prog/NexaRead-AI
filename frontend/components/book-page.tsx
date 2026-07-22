@@ -92,7 +92,7 @@ export function BookPage({
     >
       {/* Page content area */}
       <div
-        className="flex-1 overflow-y-auto overscroll-contain px-6 py-8 sm:px-10"
+        className="flex-1 overflow-y-auto overscroll-contain px-6 py-8 sm:px-10 hide-scrollbar"
         style={{
           fontFamily: style.fontFamily,
           fontSize: `${style.fontSize}px`,

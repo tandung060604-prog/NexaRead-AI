@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Menu, Search, Settings2, StickyNote, Tags, X } from "lucide-react";
+import { Menu, MessageSquare, Search, Settings2, StickyNote, Tags, X } from "lucide-react";
 import Link from "next/link";
 import {
   FormEvent,
@@ -64,15 +64,16 @@ import {
   SelectionToolbar,
 } from "./reader-tools";
 import { BookReader } from "./book-reader";
+import { DocumentChat } from "./document-chat";
 import { ReaderToolbar } from "./reader-toolbar";
 import { useReadingRoom } from "./reading-room-provider";
-import { useAmbientAudio } from "./ambient-audio-provider";
+import { PageTurnSound } from "@/lib/page-turn-sound";
 import { getPresetById } from "@/config/typography-presets";
 
 type DocumentReaderProps = { documentId: string };
-type MobilePanel = "toc" | "search" | "keywords" | "annotations" | "settings" | null;
+type MobilePanel = "toc" | "chat" | "search" | "keywords" | "annotations" | "settings" | null;
 
-const PROCESSING_STATES = new Set(["UPLOADED", "QUEUED", "EXTRACTING", "STRUCTURING"]);
+const PROCESSING_STATES = new Set(["UPLOADED", "QUEUED", "EXTRACTING", "STRUCTURING", "INDEXING"]);
 const DEFAULT_PREFERENCES: ReadingPreferencesInput = {
   theme: "light",
   font_size: 17,
@@ -127,26 +128,32 @@ function TableOfContents({ items, onNavigate }: { items: TocItem[]; onNavigate: 
   );
 }
 
-function SearchPanel({
+export function SearchPanel({
   query,
+  onQueryChange,
+  onSearch,
   results,
   isSearching,
   error,
-  onQueryChange,
-  onSearch,
   onResult,
+  onClose,
 }: {
   query: string;
+  onQueryChange: (query: string) => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
   results: SearchResult | null;
   isSearching: boolean;
   error: string | null;
-  onQueryChange: (value: string) => void;
-  onSearch: (event: FormEvent<HTMLFormElement>) => void;
   onResult: (block: ContentBlock) => void;
+  onClose: () => void;
 }) {
   return (
-    <div>
-      <form className="flex border border-[var(--reader-border)] bg-[var(--reader-surface)]" onSubmit={onSearch}>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-[var(--reader-border)] p-4">
+        <h2 className="text-lg font-semibold text-[var(--reader-foreground)]">Search</h2>
+        <button aria-label="Close search" className="text-[var(--reader-muted)] transition-colors hover:text-[var(--reader-foreground)] lg:hidden" onClick={onClose} title="Close" type="button"><X size={20} /></button>
+      </div>
+      <form className="m-4 flex items-center overflow-hidden rounded-md border border-[var(--reader-border)] focus-within:border-[var(--reader-accent)]" onSubmit={onSearch}>
         <input aria-label="Search document" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none" onChange={(event) => onQueryChange(event.target.value)} placeholder="Search text" value={query} />
         <button aria-label="Run search" className="grid size-10 place-items-center border-l border-[var(--reader-border)]" disabled={isSearching} title="Search" type="submit"><Search size={16} /></button>
       </form>
@@ -172,7 +179,22 @@ function SearchPanel({
 
 export function DocumentReader({ documentId }: DocumentReaderProps) {
   const { room, readingMode, preferences: immersivePrefs, reducedMotion } = useReadingRoom();
-  const { playPageTurn } = useAmbientAudio();
+  const pageTurnSound = useRef<PageTurnSound | null>(null);
+
+  useEffect(() => {
+    pageTurnSound.current = new PageTurnSound();
+
+    // Mark interaction on first click for audio autoplay compliance
+    const handleInteraction = () => {
+      pageTurnSound.current?.markInteraction();
+    };
+    window.addEventListener("click", handleInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      pageTurnSound.current?.destroy();
+    };
+  }, []);
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [processing, setProcessing] = useState<ProcessingStatus | null>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
@@ -218,7 +240,7 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
             timer = window.setTimeout(load, 1500);
             return;
           }
-          if (statusResult.status !== "READABLE") return;
+          if (!["READABLE", "AI_READY"].includes(statusResult.status)) return;
           Promise.all([
             fetchToc(documentId),
             fetchAllBlocks(documentId),
@@ -527,10 +549,11 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     return <div className="w-full"><ReaderToolbar activePage={activePage} backHref={`/documents/${document.id}`} pageCount={processing.page_count} progressState="idle" title={document.title} /><section className="mt-10 border-y border-[var(--border)] py-10" aria-live="polite"><p className="text-sm font-semibold uppercase text-[var(--accent-strong)]">Processing document</p><h2 className="mt-2 text-2xl font-semibold">{processing.stage}</h2><div className="mt-5 h-2 max-w-xl bg-[var(--surface-muted)]"><div className="h-full bg-[var(--accent)]" style={{ width: `${processing.progress}%` }} /></div><p className="mt-2 text-sm text-[var(--muted)]">{processing.progress}% complete</p></section></div>;
   }
 
-  const searchPanel = <SearchPanel error={searchError} isSearching={isSearching} onQueryChange={setQuery} onResult={(block) => void navigate(block.id, results?.query)} onSearch={(event) => void handleSearch(event)} query={query} results={results} />;
+  const searchPanel = <SearchPanel error={searchError} isSearching={isSearching} onClose={() => setMobilePanel(null)} onQueryChange={setQuery} onResult={(block) => void navigate(block.id, results?.query)} onSearch={handleSearch} query={query} results={results} />;
   const annotationPanel = <AnnotationPanel blocksById={blocksById} bookmarks={bookmarks} highlights={highlights} onDeleteBookmark={(bookmark) => void toggleBookmark(blocksById.get(bookmark.content_block_id)!)} onDeleteHighlight={(highlight) => void removeHighlight(highlight)} onDeleteNote={removeNoteFromHighlight} onNavigate={(blockId) => void navigate(blockId)} onSaveNote={saveNoteForHighlight} />;
   const keywordPanel = <KeywordGlossary detail={keywordDetail} error={keywordError} loading={keywordLoading} occurrences={keywords} onFeedback={sendKeywordFeedback} onNavigate={(occurrence) => void navigate(occurrence.content_block_id)} onPreferences={(next) => void changeKeywordPreferences(next)} onSelect={(occurrence) => void selectKeyword(occurrence)} preferences={keywordPreferences} selected={selectedKeyword} />;
-  
+  const chatPanel = <DocumentChat documentId={documentId} onCitation={(blockId) => void navigate(blockId)} />;
+
   const preset = getPresetById(immersivePrefs.typographyPreset || room.typographyPreset);
   const fontFamily = preset.fontBody;
   const isFocusMode = immersivePrefs.focusMode;
@@ -564,9 +587,10 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
   return (
     <div className="reader-theme w-full" data-theme={preferences.theme}>
       <ReaderToolbar activePage={activePage} backHref={`/documents/${document.id}`} pageCount={processing.page_count} progressState={progressState} title={document.title} />
-      
+
       <div className="mt-4 flex gap-2 lg:hidden px-4">
         <MobileToolButton icon={<Menu size={17} />} label="Contents" onClick={() => setMobilePanel("toc")} />
+        <MobileToolButton icon={<MessageSquare size={17} />} label="Ask document" onClick={() => setMobilePanel("chat")} />
         <MobileToolButton icon={<Search size={17} />} label="Search" onClick={() => setMobilePanel("search")} />
         <MobileToolButton icon={<Tags size={17} />} label="Technical terms" onClick={() => setMobilePanel("keywords")} />
         <MobileToolButton icon={<StickyNote size={17} />} label="Annotations" onClick={() => setMobilePanel("annotations")} />
@@ -575,9 +599,17 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
 
       <div className={`mt-5 grid items-start gap-7 ${gridClass}`}>
         {!isFocusMode ? <aside className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto border-r border-[var(--reader-border)] pr-5 lg:block pl-4"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Contents</h2><TableOfContents items={toc} onNavigate={(item) => void navigate(item.block_id)} /></aside> : null}
-        
-        <main className="min-w-0">
-          {readingMode === "scroll" ? (
+
+        <main className="min-w-0 h-[calc(100vh-8rem)]">
+          {readingMode === "pdf" ? (
+            <div className="h-full w-full border border-[var(--reader-border)] bg-white rounded-md overflow-hidden shadow-sm">
+              <iframe
+                src={pdfLink}
+                className="w-full h-full border-none"
+                title="Original PDF"
+              />
+            </div>
+          ) : readingMode === "scroll" ? (
             scrollModeContent
           ) : (
             <BookReader
@@ -596,7 +628,7 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
               onBookmark={(item) => void toggleBookmark(item)}
               onKeywordSelect={(occurrence) => void selectKeyword(occurrence)}
               onPageChange={handleBookPageChange}
-              onPageTurnSound={playPageTurn}
+              onPageTurnSound={() => pageTurnSound.current?.play()}
               onSelection={setSelection}
               pageColor={room.pageColor}
               pageTextureOpacity={room.pageTextureOpacity}
@@ -605,11 +637,11 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
             />
           )}
         </main>
-        
-        {!isFocusMode ? <aside className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto lg:block pr-4"><div className="border-b border-[var(--reader-border)] pb-6"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Search</h2>{searchPanel}</div><div className="border-b border-[var(--reader-border)] py-6">{keywordPanel}</div><div className="pt-6">{annotationPanel}</div><div className="pt-6 pb-8"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Typography</h2><ReaderSettings onChange={changePreferences} preferences={preferences} /></div></aside> : null}
+
+        {!isFocusMode ? <aside className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto lg:block pr-4"><div className="border-b border-[var(--reader-border)] pb-6">{chatPanel}</div><div className="border-b border-[var(--reader-border)] py-6"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Search</h2>{searchPanel}</div><div className="border-b border-[var(--reader-border)] py-6">{keywordPanel}</div><div className="pt-6">{annotationPanel}</div><div className="pt-6 pb-8"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Typography</h2><ReaderSettings onChange={changePreferences} preferences={preferences} /></div></aside> : null}
       </div>
       {selection ? <SelectionToolbar onCancel={() => setSelection(null)} onCreate={(color) => void addHighlight(color)} selection={selection} /> : null}
-      {mobilePanel ? <MobilePanelDialog onClose={() => setMobilePanel(null)} title={mobilePanel === "toc" ? "Contents" : mobilePanel === "search" ? "Search document" : mobilePanel === "keywords" ? "Technical terms" : mobilePanel === "annotations" ? "Annotations" : "Reading settings"}>{mobilePanel === "toc" ? <TableOfContents items={toc} onNavigate={(item) => void navigate(item.block_id)} /> : mobilePanel === "search" ? searchPanel : mobilePanel === "keywords" ? keywordPanel : mobilePanel === "annotations" ? annotationPanel : <ReaderSettings onChange={changePreferences} preferences={preferences} />}</MobilePanelDialog> : null}
+      {mobilePanel ? <MobilePanelDialog onClose={() => setMobilePanel(null)} title={mobilePanel === "toc" ? "Contents" : mobilePanel === "chat" ? "Ask document" : mobilePanel === "search" ? "Search document" : mobilePanel === "keywords" ? "Technical terms" : mobilePanel === "annotations" ? "Annotations" : "Reading settings"}>{mobilePanel === "toc" ? <TableOfContents items={toc} onNavigate={(item) => void navigate(item.block_id)} /> : mobilePanel === "chat" ? chatPanel : mobilePanel === "search" ? searchPanel : mobilePanel === "keywords" ? keywordPanel : mobilePanel === "annotations" ? annotationPanel : <ReaderSettings onChange={changePreferences} preferences={preferences} />}</MobilePanelDialog> : null}
     </div>
   );
 }

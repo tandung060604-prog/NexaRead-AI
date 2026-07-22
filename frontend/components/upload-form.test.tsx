@@ -16,8 +16,11 @@ const uploadedDocument = {
   title: "Research Notes",
   original_filename: "Research Notes.pdf",
   source_type: "pdf",
+  source_url: null,
   mime_type: "application/pdf",
   file_size: 32,
+  layout_type: "GENERAL_DOCUMENT",
+  layout_override: null,
   status: "uploaded",
   created_at: "2026-07-16T00:00:00Z",
   updated_at: "2026-07-16T00:00:00Z",
@@ -34,13 +37,13 @@ afterEach(() => {
 describe("UploadForm", () => {
   it("rejects a file that is not a PDF", () => {
     render(<UploadForm />);
-    const input = screen.getByLabelText("Choose PDF file");
+    const input = screen.getByLabelText("Choose document file");
     const file = new File(["notes"], "notes.txt", { type: "text/plain" });
 
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Choose a PDF file.");
-    expect(screen.getByRole("button", { name: "Upload PDF" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose a PDF, DOCX, or EPUB file.");
+    expect(screen.getByRole("button", { name: "Upload document" })).toBeDisabled();
   });
 
   it("shows success after a PDF upload", async () => {
@@ -51,10 +54,10 @@ describe("UploadForm", () => {
       type: "application/pdf",
     });
 
-    fireEvent.change(screen.getByLabelText("Choose PDF file"), {
+    fireEvent.change(screen.getByLabelText("Choose document file"), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Upload PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload document" }));
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Upload complete"));
     expect(screen.getByRole("link", { name: "Open Library" })).toHaveAttribute(
@@ -72,13 +75,32 @@ describe("UploadForm", () => {
     render(<UploadForm />);
     const file = new File(["%PDF-1.4"], "report.pdf", { type: "application/pdf" });
 
-    fireEvent.change(screen.getByLabelText("Choose PDF file"), {
+    fireEvent.change(screen.getByLabelText("Choose document file"), {
       target: { files: [file] },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Upload PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "Upload document" }));
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent("Document storage operation failed"),
+    );
+  });
+
+  it("imports a public URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      apiResponse({ ...uploadedDocument, source_type: "url", source_url: "https://example.com" }, 201),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<UploadForm />);
+
+    fireEvent.change(screen.getByLabelText("Public article URL"), {
+      target: { value: "https://example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import URL" }));
+
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Upload complete"));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/documents/import-url",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });

@@ -34,8 +34,11 @@ class Document(Base):
     title: Mapped[str] = mapped_column(String(255))
     original_filename: Mapped[str] = mapped_column(String(255))
     source_type: Mapped[str] = mapped_column(String(32), default="pdf")
+    source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     mime_type: Mapped[str] = mapped_column(String(128), default="application/pdf")
     file_size: Mapped[int] = mapped_column(BigInteger)
+    layout_type: Mapped[str] = mapped_column(String(64), default="GENERAL_DOCUMENT")
+    layout_override: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="UPLOADED", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(

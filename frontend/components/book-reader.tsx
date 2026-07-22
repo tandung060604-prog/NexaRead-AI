@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import type { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
 import type { BlockSelection } from "./reader-block";
@@ -50,31 +51,44 @@ type BookReaderProps = {
 // Pagination helpers
 // ---------------------------------------------------------------------------
 
-/** How many content blocks to fit per "page" in book mode. */
-const BLOCKS_PER_PAGE = 8;
+function estimateBlockHeight(block: ContentBlock): number {
+  if (block.block_type === "IMAGE") return 400;
+  if (block.block_type === "TABLE" || block.block_type === "CODE") return 200;
+  if (block.block_type.startsWith("HEADING")) return 80;
+  // Paragraphs / list items: estimate by text length (roughly 70 chars per line, 28px per line + 16px margin)
+  const lines = Math.max(1, Math.ceil((block.text?.length || 0) / 70));
+  return lines * 28 + 16;
+}
+
+const PAGE_MAX_HEIGHT = 650; // Approximated pixels for a page
 
 function paginateBlocks(blocks: ContentBlock[]): ContentBlock[][] {
   if (blocks.length === 0) return [[]];
 
   const pages: ContentBlock[][] = [];
   let current: ContentBlock[] = [];
+  let currentHeight = 0;
 
   for (const block of blocks) {
-    // Start a new page at PAGE_BREAK blocks
     if (block.block_type === "PAGE_BREAK") {
       if (current.length > 0) {
         pages.push(current);
         current = [];
+        currentHeight = 0;
       }
       continue;
     }
 
-    current.push(block);
+    const blockHeight = estimateBlockHeight(block);
 
-    // Split when page is full
-    if (current.length >= BLOCKS_PER_PAGE) {
+    // If adding it exceeds the page height (and we already have blocks), start a new page
+    if (currentHeight + blockHeight > PAGE_MAX_HEIGHT && current.length > 0) {
       pages.push(current);
-      current = [];
+      current = [block];
+      currentHeight = blockHeight;
+    } else {
+      current.push(block);
+      currentHeight += blockHeight;
     }
   }
 
@@ -137,6 +151,7 @@ export function BookReader({
   const [currentPageIndex, setCurrentPageIndex] = useState(() =>
     Math.min(initialPage, Math.max(0, pages.length - 1)),
   );
+  const [direction, setDirection] = useState(0);
   const initialPageApplied = useRef(false);
 
   // Sync initial page only once
@@ -155,6 +170,7 @@ export function BookReader({
   const handlePageChange = useCallback(
     (newPage: number) => {
       const clamped = Math.max(0, Math.min(newPage, pages.length - 1));
+      setDirection(clamped > currentPageIndex ? 1 : -1);
       setCurrentPageIndex(clamped);
 
       // Play sound
@@ -173,8 +189,40 @@ export function BookReader({
   const leftBlocks = pages[currentPageIndex] ?? [];
   const rightBlocks = twoPage ? (pages[currentPageIndex + 1] ?? []) : [];
 
+  // Framer motion variants for the 3D page turn (real book flip)
+  const pageVariants = {
+    enter: (dir: number) => ({
+      rotateY: dir > 0 ? 90 : -90,
+      opacity: 0,
+      filter: "brightness(0.5)",
+      transformOrigin: dir > 0 ? "right center" : "left center",
+    }),
+    center: (dir: number) => ({
+      zIndex: 1,
+      rotateY: 0,
+      opacity: 1,
+      filter: "brightness(1)",
+      transformOrigin: dir > 0 ? "right center" : "left center",
+      transition: {
+        rotateY: { type: "spring", stiffness: 150, damping: 25 },
+        opacity: { duration: 0.2 },
+      },
+    }),
+    exit: (dir: number) => ({
+      zIndex: 0,
+      rotateY: dir < 0 ? 90 : -90,
+      opacity: 0,
+      filter: "brightness(0.5)",
+      transformOrigin: dir < 0 ? "right center" : "left center",
+      transition: {
+        rotateY: { type: "spring", stiffness: 150, damping: 25 },
+        opacity: { duration: 0.2 },
+      },
+    }),
+  };
+
   return (
-    <div className="px-4 py-6">
+    <div className="px-4 py-6 overflow-hidden">
       <PageTurnController
         animationEnabled={animationEnabled}
         currentPage={currentPageIndex}
@@ -185,6 +233,8 @@ export function BookReader({
         totalPages={pages.length}
       >
         <PageSpread
+          direction={direction}
+          animationEnabled={animationEnabled && !reducedMotion}
           animatingSide="none"
           animationClass=""
           bookmarks={bookmarks}
@@ -203,8 +253,8 @@ export function BookReader({
           rightBlocks={rightBlocks}
           rightPageNumber={currentPageIndex + 2}
           style={style}
-          totalPages={pages.length}
           twoPage={twoPage}
+          totalPages={pages.length}
         />
       </PageTurnController>
 

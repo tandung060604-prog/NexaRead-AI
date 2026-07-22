@@ -43,7 +43,7 @@ const documentDetail = {
   source_type: "pdf",
   mime_type: "application/pdf",
   file_size: 4096,
-  status: "READABLE",
+  status: "AI_READY",
   created_at: "2026-07-16T00:00:00Z",
   updated_at: "2026-07-16T00:00:00Z",
   last_read_at: null,
@@ -59,8 +59,8 @@ const documentDetail = {
 
 const readableStatus: ProcessingStatus = {
   document_id: documentId,
-  status: "READABLE",
-  stage: "READABLE",
+  status: "AI_READY",
+  stage: "AI_READY",
   progress: 100,
   error_code: null,
   error_message: null,
@@ -355,7 +355,7 @@ describe("DocumentReader", () => {
     );
 
     const link = await screen.findByRole("link", { name: "View original PDF" });
-    expect(link).toHaveAttribute("href", `http://localhost:8000/api/documents/${documentId}/original`);
+    expect(link).toHaveAttribute("href", `/api/documents/${documentId}/original`);
   });
 
   it("opens reader tools for the mobile layout", async () => {

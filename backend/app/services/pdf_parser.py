@@ -5,28 +5,23 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from enum import StrEnum
 from statistics import median
 from typing import Any
 
 import pymupdf
 
-
-class BlockType(StrEnum):
-    HEADING_1 = "HEADING_1"
-    HEADING_2 = "HEADING_2"
-    HEADING_3 = "HEADING_3"
-    PARAGRAPH = "PARAGRAPH"
-    LIST_ITEM = "LIST_ITEM"
-    CODE = "CODE"
-    QUOTE = "QUOTE"
-    PAGE_BREAK = "PAGE_BREAK"
+from app.services.normalized_document import (
+    BlockType,
+    DocumentParseError,
+    NormalizedDocument,
+    ParsedBlock,
+    ParsedPage,
+)
 
 
-class PdfParseError(RuntimeError):
+class PdfParseError(DocumentParseError):
     def __init__(self, code: str) -> None:
-        super().__init__("PDF extraction failed")
-        self.code = code
+        super().__init__(code, "PDF extraction failed")
 
 
 class PdfNeedsOcrError(PdfParseError):
@@ -34,48 +29,17 @@ class PdfNeedsOcrError(PdfParseError):
         super().__init__("OCR_REQUIRED")
 
 
-@dataclass(frozen=True)
-class ParsedBlock:
-    sequence_number: int
-    block_type: BlockType
-    text: str
-    page_number: int
-    chapter_index: int | None
-    section_index: int | None
-    paragraph_index: int | None
-    start_offset: int
-    end_offset: int
-    bounding_box: list[float]
-    font_name: str | None
-    font_size: float | None
-    is_bold: bool
-    is_italic: bool
-    confidence: float
-    metadata: dict[str, object]
-    content_hash: str
-    parent_sequence_number: int | None
+ParsedPdf = NormalizedDocument
 
-
-@dataclass(frozen=True)
-class ParsedPage:
-    page_number: int
-    width: float
-    height: float
-    text: str
-    word_count: int
-    blocks: list[ParsedBlock]
-
-
-@dataclass(frozen=True)
-class ParsedPdf:
-    metadata: dict[str, object]
-    page_count: int
-    outline: list[dict[str, object]]
-    pages: list[ParsedPage]
-
-    @property
-    def blocks(self) -> list[ParsedBlock]:
-        return [block for page in self.pages for block in page.blocks]
+__all__ = [
+    "BlockType",
+    "ParsedBlock",
+    "ParsedPage",
+    "ParsedPdf",
+    "PdfNeedsOcrError",
+    "PdfParseError",
+    "parse_pdf",
+]
 
 
 @dataclass

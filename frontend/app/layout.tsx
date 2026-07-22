@@ -32,8 +32,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} bg-[var(--background)] text-[var(--foreground)]`}>
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
 
 import httpx
@@ -7,6 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_database_session
 from app.main import app
@@ -17,6 +18,7 @@ from app.services.storage import StorageError, StorageService, get_storage_servi
 class FakeStorageService(StorageService):
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
+        self.content_types: dict[str, str] = {}
         self.fail_upload = False
         self.fail_delete = False
 
@@ -26,8 +28,8 @@ class FakeStorageService(StorageService):
     async def upload(self, key: str, data: bytes, content_type: str) -> None:
         if self.fail_upload:
             raise StorageError("simulated upload failure")
-        assert content_type == "application/pdf"
         self.objects[key] = data
+        self.content_types[key] = content_type
 
     async def download(self, key: str) -> bytes:
         if key not in self.objects:
@@ -38,6 +40,7 @@ class FakeStorageService(StorageService):
         if self.fail_delete:
             raise StorageError("simulated delete failure")
         self.objects.pop(key, None)
+        self.content_types.pop(key, None)
 
 
 class FakeDocumentQueue(DocumentQueue):
@@ -59,6 +62,21 @@ class ApiTestContext:
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
+
+
+@pytest.fixture(autouse=True)
+def force_local_rag_provider() -> Iterator[None]:
+    """Prevent tests from inheriting a paid provider from the local .env file."""
+    settings = get_settings()
+    original_provider = settings.rag_provider
+    original_rate_limit = settings.ai_rate_limit_per_minute
+    settings.rag_provider = "local"
+    settings.ai_rate_limit_per_minute = 0
+    try:
+        yield
+    finally:
+        settings.rag_provider = original_provider
+        settings.ai_rate_limit_per_minute = original_rate_limit
 
 
 @pytest.fixture

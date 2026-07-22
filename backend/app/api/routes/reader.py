@@ -143,13 +143,13 @@ async def original_pdf(
     owner_id: OwnerDependency,
 ) -> Response:
     try:
-        data, filename = await get_original_pdf(session, storage, document_id, owner_id)
+        data, filename, mime_type = await get_original_pdf(session, storage, document_id, owner_id)
     except (DocumentNotFoundError, StorageError) as exc:
         _raise_reader_error(exc)
     encoded_filename = quote(filename)
     return Response(
         content=data,
-        media_type="application/pdf",
+        media_type=mime_type,
         headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}"},
     )
 

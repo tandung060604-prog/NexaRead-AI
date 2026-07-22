@@ -17,9 +17,9 @@ const DEBOUNCE_MS = 250;
  * In development these are placeholders.  Replace with real foley assets.
  */
 const PAGE_TURN_VARIANTS = [
-  "/audio/page-turn-1.mp3",
-  "/audio/page-turn-2.mp3",
-  "/audio/page-turn-3.mp3",
+  "https://actions.google.com/sounds/v1/foley/turn_page.ogg",
+  "https://actions.google.com/sounds/v1/foley/turn_page.ogg",
+  "https://actions.google.com/sounds/v1/foley/turn_page.ogg",
 ];
 
 export class PageTurnSound {

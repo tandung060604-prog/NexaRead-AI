@@ -23,8 +23,11 @@ export type DocumentSummary = {
   title: string;
   original_filename: string;
   source_type: string;
+  source_url: string | null;
   mime_type: string;
   file_size: number;
+  layout_type: string;
+  layout_override: string | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -240,7 +243,7 @@ export type KeywordPreferencesInput = Omit<
   "id" | "available_categories" | "updated_at"
 >;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, init);
@@ -269,6 +272,14 @@ export function uploadDocument(file: File): Promise<DocumentDetail> {
   return apiRequest<DocumentDetail>("/api/documents/upload", {
     method: "POST",
     body: formData,
+  });
+}
+
+export function importDocumentUrl(url: string): Promise<DocumentDetail> {
+  return apiRequest<DocumentDetail>("/api/documents/import-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
   });
 }
 

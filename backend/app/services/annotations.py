@@ -46,7 +46,7 @@ async def _get_owned_version(
         .where(
             Document.id == document_id,
             Document.owner_id == user_id,
-            Document.status == "READABLE",
+            Document.status.in_(("READABLE", "AI_READY")),
             DocumentVersion.id == version_id,
         )
     )

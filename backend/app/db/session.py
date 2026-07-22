@@ -20,5 +20,12 @@ async def check_database_connection() -> None:
         await connection.execute(text("SELECT 1"))
 
 
+async def check_migration_current(expected_revision: str = "20260722_0006") -> None:
+    async with engine.connect() as connection:
+        revision = await connection.scalar(text("SELECT version_num FROM alembic_version"))
+    if revision != expected_revision:
+        raise RuntimeError("Database migration is not current")
+
+
 async def dispose_database_engine() -> None:
     await engine.dispose()

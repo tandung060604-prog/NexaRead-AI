@@ -187,13 +187,22 @@ function TableBlock({ block }: { block: ContentBlock }) {
     return <pre className="my-6 overflow-x-auto border border-[var(--reader-border)] p-4 text-sm">{block.text}</pre>;
   }
   return (
-    <div className="my-6 overflow-x-auto border border-[var(--reader-border)]">
-      <table className="min-w-full border-collapse text-left text-sm">
+    <div className="my-8 overflow-x-auto">
+      <table className="w-full text-left text-[0.85em] leading-snug">
+        <thead>
+          <tr className="border-b-2 border-[var(--reader-foreground)]/80">
+            {(rows[0] as unknown[]).map((cell, cellIndex) => (
+              <th className="py-2.5 px-3 font-bold text-[var(--reader-foreground)]" key={cellIndex}>
+                {String(cell ?? "")}
+              </th>
+            ))}
+          </tr>
+        </thead>
         <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr className="border-b border-[var(--reader-border)] last:border-0" key={rowIndex}>
+          {rows.slice(1).map((row, rowIndex) => (
+            <tr className="border-b border-[var(--reader-border)]/50 last:border-b-2 last:border-[var(--reader-foreground)]/80" key={rowIndex}>
               {(row as unknown[]).map((cell, cellIndex) => (
-                <td className="min-w-32 border-r border-[var(--reader-border)] p-3 last:border-0" key={cellIndex}>
+                <td className="py-2 px-3 text-[var(--reader-muted)] align-top" key={cellIndex}>
                   {String(cell ?? "")}
                 </td>
               ))}
@@ -225,7 +234,7 @@ function FormulaBlock({ block }: { block: ContentBlock }) {
   return (
     <div
       aria-label={`Formula: ${formula}`}
-      className="my-6 overflow-x-auto py-3 text-center"
+      className="my-8 overflow-x-auto py-4 text-center text-[1.1em]"
       dangerouslySetInnerHTML={{ __html: markup }}
     />
   );
@@ -233,16 +242,22 @@ function FormulaBlock({ block }: { block: ContentBlock }) {
 
 function ImageBlock({ block }: { block: ContentBlock }) {
   return (
-    <figure className="my-7">
+    <figure className="my-8 flex flex-col items-center">
       {/* The URL is an ownership-checked API endpoint, never a public object URL. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt={block.text || "Document image"}
-        className="max-h-[70vh] max-w-full object-contain"
-        loading="lazy"
-        src={protectedBlockImageUrl(block.id)}
-      />
-      {block.text ? <figcaption className="mt-2 text-sm text-[var(--reader-muted)]">{block.text}</figcaption> : null}
+      <div className="relative rounded-sm bg-white p-2 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-[var(--reader-border)]/50">
+        <img
+          alt={block.text || "Document figure"}
+          className="max-h-[50vh] max-w-full object-contain mix-blend-multiply"
+          loading="lazy"
+          src={protectedBlockImageUrl(block.id)}
+        />
+      </div>
+      {block.text ? (
+        <figcaption className="mt-4 text-center text-[0.8em] font-medium italic text-[var(--reader-muted)] px-6">
+          Figure: {block.text}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }
@@ -309,25 +324,25 @@ export function ReaderBlock({
   let blockContent: ReactNode;
   switch (block.block_type) {
     case "HEADING_1":
-      blockContent = <h1 className={`${commonClass} mt-10 text-3xl font-semibold first:mt-0`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h1>;
+      blockContent = <h1 className={`${commonClass} mt-6 mb-3 text-3xl font-semibold first:mt-0`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h1>;
       break;
     case "HEADING_2":
-      blockContent = <h2 className={`${commonClass} mt-8 text-2xl font-semibold`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h2>;
+      blockContent = <h2 className={`${commonClass} mt-5 mb-2 text-2xl font-semibold`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h2>;
       break;
     case "HEADING_3":
-      blockContent = <h3 className={`${commonClass} mt-7 text-xl font-semibold`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h3>;
+      blockContent = <h3 className={`${commonClass} mt-4 mb-2 text-xl font-semibold`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</h3>;
       break;
     case "LIST_ITEM":
-      blockContent = <ul className={`${commonClass} my-3 list-disc pl-7`}><li className={`pl-1 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot}>{content}</li></ul>;
+      blockContent = <ul className={`${commonClass} mb-1 list-disc pl-7`}><li className={`pl-1 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot}>{content}</li></ul>;
       break;
     case "CODE":
       blockContent = <CodeBlock block={block} />;
       break;
     case "QUOTE":
-      blockContent = <blockquote className={`${commonClass} my-5 border-l-4 border-[var(--reader-accent)] pl-5 italic`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</blockquote>;
+      blockContent = <blockquote className={`${commonClass} mb-3 mt-1 border-l-4 border-[var(--reader-accent)] pl-5 italic`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</blockquote>;
       break;
     case "PAGE_BREAK":
-      blockContent = <div aria-label={`End of page ${block.page_number}`} className="my-10 flex items-center gap-4 text-xs text-[var(--reader-muted)]" role="separator"><span className="h-px flex-1 bg-[var(--reader-border)]" />Page {block.page_number}<span className="h-px flex-1 bg-[var(--reader-border)]" /></div>;
+      blockContent = <div aria-label={`End of page ${block.page_number}`} className="my-6 flex items-center gap-4 text-xs text-[var(--reader-muted)]" role="separator"><span className="h-px flex-1 bg-[var(--reader-border)]" />Page {block.page_number}<span className="h-px flex-1 bg-[var(--reader-border)]" /></div>;
       break;
     case "TABLE":
       blockContent = <TableBlock block={block} />;
@@ -339,7 +354,7 @@ export function ReaderBlock({
       blockContent = <ImageBlock block={block} />;
       break;
     default:
-      blockContent = <p className={`${commonClass} my-4 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</p>;
+      blockContent = <p className={`${commonClass} mb-2 mt-0 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</p>;
   }
 
   return (

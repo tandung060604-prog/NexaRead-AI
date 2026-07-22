@@ -1,0 +1,84 @@
+{
+  "dataset_version": "2026.07-v1",
+  "generated_at": "2026-07-22T04:10:30.056084+00:00",
+  "provider": "local-hash-embedding-v1",
+  "case_count": 8,
+  "passed": 8,
+  "metrics": {
+    "retrieval_recall_at_3": 1.0,
+    "context_precision_at_3": 0.7,
+    "citation_accuracy": 0.8,
+    "citation_coverage": 0.8,
+    "faithfulness": 1.0,
+    "answer_relevance": 0.5675,
+    "no_answer_accuracy": 1.0,
+    "latency_p50_ms": 0.812,
+    "latency_p95_ms": 34.337,
+    "prompt_tokens": 747,
+    "completion_tokens": 95,
+    "cost_microusd": 0
+  },
+  "cases": [
+    {
+      "id": "rag-001",
+      "passed": true,
+      "retrieved_source_blocks": [
+        "rag-hybrid",
+        "rag-heading"
+      ],
+      "latency_ms": 34.337
+    },
+    {
+      "id": "rag-002",
+      "passed": true,
+      "retrieved_source_blocks": [
+        "rag-threshold",
+        "rag-citation"
+      ],
+      "latency_ms": 1.226
+    },
+    {
+      "id": "rag-003",
+      "passed": true,
+      "retrieved_source_blocks": [],
+      "latency_ms": 0.91
+    },
+    {
+      "id": "rag-004",
+      "passed": true,
+      "retrieved_source_blocks": [],
+      "latency_ms": 0.498
+    },
+    {
+      "id": "rag-005",
+      "passed": true,
+      "retrieved_source_blocks": [
+        "rag-threshold"
+      ],
+      "latency_ms": 0.894
+    },
+    {
+      "id": "rag-006",
+      "passed": true,
+      "retrieved_source_blocks": [
+        "reader-block"
+      ],
+      "latency_ms": 0.573
+    },
+    {
+      "id": "rag-007",
+      "passed": true,
+      "retrieved_source_blocks": [
+        "reader-page",
+        "reader-block"
+      ],
+      "latency_ms": 0.555
+    },
+    {
+      "id": "rag-008",
+      "passed": true,
+      "retrieved_source_blocks": [],
+      "latency_ms": 0.731
+    }
+  ]
+}

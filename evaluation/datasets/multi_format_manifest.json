@@ -1,0 +1,9 @@
+{
+  "dataset_version": "2026.07-m7-v1",
+  "formats": ["docx", "epub", "url"],
+  "cases": [
+    {"id": "docx-structure", "checks": ["metadata", "heading", "paragraph", "list", "table", "order"]},
+    {"id": "epub-spine", "checks": ["metadata", "spine_order", "heading", "code", "drm_refusal"]},
+    {"id": "url-article", "checks": ["main_content", "heading", "paragraph", "image", "sanitization"]}
+  ]
+}

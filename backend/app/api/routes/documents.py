@@ -12,6 +12,7 @@ from app.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
     DocumentUpdate,
+    UrlImportRequest,
 )
 from app.services.documents import (
     DocumentNotFoundError,
@@ -27,6 +28,7 @@ from app.services.documents import (
 )
 from app.services.queue import DocumentQueue, get_document_queue
 from app.services.storage import StorageService, get_storage_service
+from app.services.url_documents import create_url_document
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -83,6 +85,31 @@ async def upload_document(
     return DocumentDetailResponse.model_validate(document)
 
 
+@router.post(
+    "/import-url", response_model=DocumentDetailResponse, status_code=status.HTTP_201_CREATED
+)
+async def import_document_url(
+    request: UrlImportRequest,
+    session: SessionDependency,
+    storage: StorageDependency,
+    queue: QueueDependency,
+    owner_id: OwnerDependency,
+    settings: SettingsDependency,
+) -> DocumentDetailResponse:
+    try:
+        document = await create_url_document(
+            session, storage, queue, request.url, owner_id, settings
+        )
+    except (
+        DocumentValidationError,
+        DocumentStorageError,
+        DocumentPersistenceError,
+        DocumentQueueError,
+    ) as exc:
+        raise_api_error(exc)
+    return DocumentDetailResponse.model_validate(document)
+
+
 @router.get("", response_model=DocumentListResponse)
 async def get_documents(
     session: SessionDependency,
@@ -120,7 +147,9 @@ async def update_document(
     owner_id: OwnerDependency,
 ) -> DocumentDetailResponse:
     try:
-        document = await rename_document(session, document_id, owner_id, update.title)
+        document = await rename_document(
+            session, document_id, owner_id, update.title, update.layout_override
+        )
     except (DocumentNotFoundError, DocumentPersistenceError) as exc:
         raise_api_error(exc)
     return DocumentDetailResponse.model_validate(document)

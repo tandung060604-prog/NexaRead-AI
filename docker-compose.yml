@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nexaread}
       POSTGRES_USER: ${POSTGRES_USER:-nexaread}
@@ -65,7 +65,24 @@ services:
       S3_BUCKET: ${S3_BUCKET:-nexaread-documents}
       S3_REGION: ${S3_REGION:-us-east-1}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
+      URL_IMPORT_MAX_MB: ${URL_IMPORT_MAX_MB:-10}
+      URL_IMPORT_TIMEOUT_SECONDS: ${URL_IMPORT_TIMEOUT_SECONDS:-10}
+      URL_IMPORT_MAX_REDIRECTS: ${URL_IMPORT_MAX_REDIRECTS:-3}
+      PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-60}
       MIN_EXTRACTED_TEXT_CHARACTERS: ${MIN_EXTRACTED_TEXT_CHARACTERS:-20}
+      RAG_PROVIDER: ${RAG_PROVIDER:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-text-embedding-3-small}
+      RAG_EMBEDDING_DIMENSIONS: ${RAG_EMBEDDING_DIMENSIONS:-384}
+      RAG_ANSWER_MODEL: ${RAG_ANSWER_MODEL:-gpt-5-mini}
+      RAG_TOP_K: ${RAG_TOP_K:-8}
+      RAG_EVIDENCE_THRESHOLD: ${RAG_EVIDENCE_THRESHOLD:-0.08}
+      RAG_PROVIDER_TIMEOUT_SECONDS: ${RAG_PROVIDER_TIMEOUT_SECONDS:-30}
+      AI_RATE_LIMIT_PER_MINUTE: ${AI_RATE_LIMIT_PER_MINUTE:-30}
+      RAG_RERANK_TIMEOUT_SECONDS: ${RAG_RERANK_TIMEOUT_SECONDS:-0.25}
+      RAG_INPUT_COST_PER_MILLION: ${RAG_INPUT_COST_PER_MILLION:-0}
+      RAG_OUTPUT_COST_PER_MILLION: ${RAG_OUTPUT_COST_PER_MILLION:-0}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -98,7 +115,7 @@ services:
         "--processes",
         "1",
         "--threads",
-        "2",
+        "1",
       ]
     environment:
       APP_ENV: ${APP_ENV:-development}
@@ -110,6 +127,14 @@ services:
       S3_BUCKET: ${S3_BUCKET:-nexaread-documents}
       S3_REGION: ${S3_REGION:-us-east-1}
       MIN_EXTRACTED_TEXT_CHARACTERS: ${MIN_EXTRACTED_TEXT_CHARACTERS:-20}
+      PARSER_TIMEOUT_SECONDS: ${PARSER_TIMEOUT_SECONDS:-60}
+      RAG_PROVIDER: ${RAG_PROVIDER:-local}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      RAG_EMBEDDING_MODEL: ${RAG_EMBEDDING_MODEL:-text-embedding-3-small}
+      RAG_EMBEDDING_DIMENSIONS: ${RAG_EMBEDDING_DIMENSIONS:-384}
+      RAG_ANSWER_MODEL: ${RAG_ANSWER_MODEL:-gpt-5-mini}
+      RAG_PROVIDER_TIMEOUT_SECONDS: ${RAG_PROVIDER_TIMEOUT_SECONDS:-30}
     depends_on:
       backend:
         condition: service_healthy

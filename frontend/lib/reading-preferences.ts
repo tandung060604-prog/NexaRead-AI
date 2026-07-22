@@ -13,7 +13,7 @@ const NAMESPACE = "nexaread:immersive";
 // Types
 // ---------------------------------------------------------------------------
 
-export type ReadingMode = "scroll" | "book";
+export type ReadingMode = "scroll" | "book" | "pdf";
 
 export type ImmersivePreferences = {
   /** Currently selected reading room ID. */
