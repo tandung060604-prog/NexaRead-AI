@@ -21,7 +21,14 @@ Uploaded files, EPUB/DOCX package metadata, imported HTML, document text, and us
 
 ## Authorization and data isolation
 
-All document, version, block, annotation, keyword, chunk, chat, citation, and derived-image reads use the configured owner boundary. Database foreign keys cascade derived rows on document deletion; the document service removes every original object version before deleting metadata. Authentication remains a known pre-production gap: local development uses `DEFAULT_OWNER_ID`; production must integrate a verified identity provider before public access.
+All document, version, block, annotation, keyword, chunk, chat, citation, and
+derived-image reads resolve ownership from an authenticated, hashed database
+session. Passwords use Argon2id. Opaque session and CSRF tokens are stored only
+as hashes; the session cookie is HttpOnly, SameSite=Lax, and Secure in
+production. Unsafe authenticated requests require a matching CSRF cookie,
+header, and server-side session hash. Database foreign keys cascade
+user-owned rows on account deletion; the document service removes every
+original object version before deleting metadata.
 
 ## AI controls
 
@@ -37,7 +44,7 @@ Delete removes the original object and database-owned derived pages, blocks, ann
 
 ## Required production controls outside this repository
 
-- Verified authentication/session management and tenant claims.
+- External security review of authentication, migration, and tenant isolation.
 - TLS, encrypted managed storage, secret manager, least-privilege service identities, and private service networking.
 - Malware quarantine/scanning, WAF/ingress limits, dependency/container scanning, audit retention, and incident response ownership.
 - Scheduled restore tests and deletion/retention verification.

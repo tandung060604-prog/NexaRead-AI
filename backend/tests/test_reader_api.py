@@ -59,8 +59,21 @@ async def test_processing_status(api_context: ApiTestContext) -> None:
     await process_upload(api_context, payload)
     readable = await api_context.client.get(f"/api/documents/{document_id}/processing-status")
 
-    assert queued.json()["status"] == "QUEUED"
+    assert queued.json()["status"] == "SAFETY_CHECK"
+    assert queued.json()["stage"] == "SAFETY_CHECK"
+    assert queued.json()["completed_stages"] == ["UPLOADING"]
     assert readable.json()["status"] == "AI_READY"
+    assert readable.json()["stage"] == "COMPLETE"
+    assert readable.json()["completed_stages"] == [
+        "UPLOADING",
+        "SAFETY_CHECK",
+        "EXTRACTING",
+        "STRUCTURING",
+        "READABLE",
+        "TOC",
+        "INDEXING",
+        "COMPLETE",
+    ]
     assert readable.json()["progress"] == 100
     assert readable.json()["page_count"] == 1
 
@@ -89,6 +102,24 @@ async def test_get_blocks_in_reading_order(api_context: ApiTestContext) -> None:
     body = response.json()
     assert body["total"] == 3
     assert body["items"][0]["text"] == "Reader Guide"
+    assert body["items"][0]["source_text"] == body["items"][0]["text"]
+    assert body["items"][0]["display_text"] == body["items"][0]["text"]
+    assert body["items"][0]["transformation_log"] == []
+    assert body["items"][0]["transformation_confidence"] == 1.0
+    assert body["items"][0]["needs_review"] is False
+    assert body["items"][0]["semantic_role"] == "heading"
+    assert body["items"][0]["heading_level"] == 1
+    assert body["items"][0]["keep_with_next"] is True
+    assert body["items"][0]["break_before"] is True
+    assert body["items"][0]["source_page_number"] == 1
+    assert body["items"][0]["source_anchor"] == {
+        "page_number": 1,
+        "bounding_box": body["items"][0]["bounding_box"],
+        "parser_block_ids": ["page-1-block-1"],
+        "source_block_ids": [body["items"][0]["id"]],
+        "source_start_offset": body["items"][0]["start_offset"],
+        "source_end_offset": body["items"][0]["end_offset"],
+    }
     assert body["items"][0]["bounding_box"]
     assert body["items"][0]["content_hash"]
 
@@ -147,7 +178,7 @@ async def test_document_not_yet_readable(api_context: ApiTestContext) -> None:
     response = await api_context.client.get(f"/api/documents/{payload['id']}/blocks")
 
     assert response.status_code == 409
-    assert "QUEUED" in response.json()["detail"]
+    assert "SAFETY_CHECK" in response.json()["detail"]
 
 
 @pytest.mark.anyio

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -31,7 +32,9 @@ class ReadingProgress(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     document_id: Mapped[UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), index=True
     )
@@ -44,7 +47,8 @@ class ReadingProgress(Base):
     page_number: Mapped[int] = mapped_column(Integer, default=1)
     progress_percent: Mapped[float] = mapped_column(Float, default=0.0)
     scroll_offset: Mapped[float] = mapped_column(Float, default=0.0)
-    reading_mode: Mapped[str] = mapped_column(String(32), default="standard")
+    reading_mode: Mapped[str] = mapped_column(String(32), default="clean")
+    reading_seconds: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
@@ -58,7 +62,9 @@ class Bookmark(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     document_id: Mapped[UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), index=True
     )
@@ -90,7 +96,9 @@ class Highlight(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     document_id: Mapped[UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), index=True
     )
@@ -124,7 +132,9 @@ class Note(Base):
     __tablename__ = "notes"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     highlight_id: Mapped[UUID] = mapped_column(
         ForeignKey("highlights.id", ondelete="CASCADE"), unique=True
     )
@@ -156,16 +166,77 @@ class UserReadingPreference(Base):
             "reading_width >= 520 AND reading_width <= 1000",
             name="ck_reading_preferences_width",
         ),
+        CheckConstraint(
+            "reading_mode IN ('original', 'clean', 'book', 'study')",
+            name="ck_reading_preferences_mode",
+        ),
+        CheckConstraint(
+            "master_volume >= 0 AND master_volume <= 1 "
+            "AND ambient_volume >= 0 AND ambient_volume <= 1 "
+            "AND page_turn_volume >= 0 AND page_turn_volume <= 1",
+            name="ck_reading_preferences_volumes",
+        ),
+        CheckConstraint(
+            "language IN ('vi', 'en')",
+            name="ck_reading_preferences_language",
+        ),
+        CheckConstraint(
+            "keyword_level IN ('BEGINNER', 'INTERMEDIATE', 'ADVANCED')",
+            name="ck_reading_preferences_keyword_level",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
     theme: Mapped[str] = mapped_column(String(16), default="light")
     font_size: Mapped[int] = mapped_column(Integer, default=17)
     line_height: Mapped[float] = mapped_column(Float, default=1.8)
     reading_width: Mapped[int] = mapped_column(Integer, default=720)
     font_family: Mapped[str] = mapped_column(String(16), default="sans")
     focus_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    reading_mode: Mapped[str] = mapped_column(String(16), default="clean")
+    reading_room: Mapped[str] = mapped_column(String(64), default="minimal-focus")
+    page_turn_animation: Mapped[bool] = mapped_column(Boolean, default=True)
+    page_turn_sound: Mapped[bool] = mapped_column(Boolean, default=False)
+    ambient_sound: Mapped[bool] = mapped_column(Boolean, default=False)
+    master_volume: Mapped[float] = mapped_column(Float, default=0.7)
+    ambient_volume: Mapped[float] = mapped_column(Float, default=0.5)
+    page_turn_volume: Mapped[float] = mapped_column(Float, default=0.6)
+    language: Mapped[str] = mapped_column(String(8), default="vi")
+    keyword_level: Mapped[str] = mapped_column(String(32), default="BEGINNER")
+    use_document_type_defaults: Mapped[bool] = mapped_column(Boolean, default=True)
+    analytics_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
+
+
+class ReadingDailySummary(Base):
+    __tablename__ = "reading_daily_summaries"
+    __table_args__ = (
+        CheckConstraint(
+            "reading_seconds >= 0",
+            name="ck_reading_daily_summaries_seconds",
+        ),
+        Index(
+            "uq_reading_daily_summaries_user_date",
+            "user_id",
+            "activity_date",
+            unique=True,
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    activity_date: Mapped[date] = mapped_column(Date)
+    reading_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
     )

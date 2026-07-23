@@ -3,6 +3,7 @@
 import {
   BookOpen,
   Focus,
+  GraduationCap,
   Home,
   Maximize,
   Minimize,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+
+import { useI18n } from "@/components/i18n-provider";
 
 import { useReadingRoom } from "./reading-room-provider";
 
@@ -25,6 +28,8 @@ type ReaderToolbarProps = {
   backHref: string;
   /** Current page / total pages. */
   activePage: number;
+  readingPage?: number;
+  chapterTitle?: string | null;
   pageCount: number | null;
   /** Progress save state. */
   progressState: "idle" | "saving" | "saved" | "failed";
@@ -40,11 +45,15 @@ export function ReaderToolbar({
   title,
   backHref,
   activePage,
+  readingPage = activePage,
+  chapterTitle,
   pageCount,
   progressState,
   children,
 }: ReaderToolbarProps) {
-  const { room, readingMode, setReadingMode, setRoomSelectorOpen, preferences, updatePreferences } = useReadingRoom();
+  const { readingMode, setReadingMode, preferences, updatePreferences } =
+    useReadingRoom();
+  const { t } = useI18n();
   const [hidden, setHidden] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const lastScrollY = useRef(0);
@@ -102,34 +111,33 @@ export function ReaderToolbar({
       className="toolbar-auto-hide sticky left-0 right-0 top-0 z-30 border-b border-[var(--reader-border)] bg-[var(--reader-surface)]/95 backdrop-blur-sm"
       data-hidden={hidden}
     >
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
+      <div className="mx-auto flex min-h-14 max-w-7xl items-center gap-1 px-2 sm:gap-3 sm:px-4">
         {/* Back link */}
         <Link
           className="flex items-center gap-1.5 text-sm font-semibold text-[var(--reader-accent)] hover:underline"
           href={backHref}
         >
           <Home size={16} />
-          <span className="hidden sm:inline">Library</span>
+          <span className="hidden sm:inline">{t("reader", "toolbar.library")}</span>
         </Link>
 
         {/* Divider */}
         <div className="h-5 w-px bg-[var(--reader-border)]" />
 
         {/* Title + page info */}
-        <div className="min-w-0 flex-1">
+        <div className="hidden min-w-0 flex-1 sm:block">
           <h1 className="truncate text-sm font-semibold">{title}</h1>
           <div className="flex gap-2 text-xs text-[var(--reader-muted)]">
-            <span>
-              Page {activePage}
-              {pageCount ? ` of ${pageCount}` : ""}
-            </span>
+            {chapterTitle ? <span className="max-w-44 truncate">{chapterTitle}</span> : null}
+            <span>{t("reader", "sourcePage")}: {activePage}{pageCount ? ` / ${pageCount}` : ""}</span>
+            <span>{t("reader", "readingPage")}: {readingPage}</span>
             <span aria-live="polite">
               {progressState === "saving"
-                ? "Saving…"
+                ? t("reader", "toolbar.saving")
                 : progressState === "saved"
-                  ? "✓ Saved"
+                  ? `✓ ${t("reader", "toolbar.saved")}`
                   : progressState === "failed"
-                    ? "Save failed"
+                    ? t("reader", "toolbar.saveFailed")
                     : ""}
             </span>
           </div>
@@ -140,34 +148,44 @@ export function ReaderToolbar({
           {/* Reading mode toggle */}
           <div className="flex rounded-lg border border-[var(--reader-border)] overflow-hidden">
             <button
-              aria-label="Scroll mode"
-              aria-pressed={readingMode === "scroll"}
-              className="grid size-9 place-items-center text-[var(--reader-muted)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
-              onClick={() => setReadingMode("scroll")}
-              title="Scroll mode"
+              aria-label={t("reader", "toolbar.cleanMode")}
+              aria-pressed={readingMode === "clean"}
+              className="grid size-11 place-items-center text-[var(--reader-muted)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--reader-accent)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
+              onClick={() => setReadingMode("clean")}
+              title={t("reader", "toolbar.cleanMode")}
               type="button"
             >
               <Scroll size={16} />
             </button>
             <button
-              aria-label="Book mode"
+              aria-label={t("reader", "toolbar.bookMode")}
               aria-pressed={readingMode === "book"}
-              className="grid size-9 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
+              className="grid size-11 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--reader-accent)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
               onClick={() => setReadingMode("book")}
-              title="Book mode"
+              title={t("reader", "toolbar.bookMode")}
               type="button"
             >
               <BookOpen size={16} />
             </button>
             <button
-              aria-label="Original PDF"
-              aria-pressed={readingMode === "pdf"}
-              className="grid size-9 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
-              onClick={() => setReadingMode("pdf")}
-              title="Original PDF"
+              aria-label={t("reader", "toolbar.originalMode")}
+              aria-pressed={readingMode === "original"}
+              className="grid size-11 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--reader-accent)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
+              onClick={() => setReadingMode("original")}
+              title={t("reader", "toolbar.originalMode")}
               type="button"
             >
               <FileText size={16} />
+            </button>
+            <button
+              aria-label={t("reader", "toolbar.studyMode")}
+              aria-pressed={readingMode === "study"}
+              className="grid size-11 place-items-center border-l border-[var(--reader-border)] text-[var(--reader-muted)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--reader-accent)] aria-pressed:bg-[var(--reader-surface-muted)] aria-pressed:text-[var(--reader-foreground)]"
+              onClick={() => setReadingMode("study")}
+              title={t("reader", "toolbar.studyMode")}
+              type="button"
+            >
+              <GraduationCap size={16} />
             </button>
           </div>
 
@@ -175,11 +193,11 @@ export function ReaderToolbar({
 
           {/* Focus mode */}
           <button
-            aria-label="Focus mode"
+            aria-label={t("reader", "toolbar.focusMode")}
             aria-pressed={preferences.focusMode}
-            className="grid size-10 place-items-center rounded-lg border border-[var(--reader-border)] bg-[var(--reader-surface)] transition-colors hover:bg-[var(--reader-surface-muted)] aria-pressed:bg-[var(--reader-accent)] aria-pressed:text-white"
+            className="grid size-11 place-items-center rounded-lg border border-[var(--reader-border)] bg-[var(--reader-surface)] transition-colors hover:bg-[var(--reader-surface-muted)] focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)] aria-pressed:bg-[var(--reader-accent)] aria-pressed:text-[var(--reader-accent-foreground)]"
             onClick={() => updatePreferences({ focusMode: !preferences.focusMode })}
-            title="Focus mode"
+            title={t("reader", "toolbar.focusMode")}
             type="button"
           >
             <Focus size={16} />
@@ -187,10 +205,18 @@ export function ReaderToolbar({
 
           {/* Fullscreen */}
           <button
-            aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            aria-label={
+              isFullscreen
+                ? t("reader", "toolbar.exitFullscreen")
+                : t("reader", "toolbar.fullscreen")
+            }
             className="hidden size-10 place-items-center rounded-lg border border-[var(--reader-border)] bg-[var(--reader-surface)] transition-colors hover:bg-[var(--reader-surface-muted)] sm:grid"
             onClick={() => void toggleFullscreen()}
-            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={
+              isFullscreen
+                ? t("reader", "toolbar.exitFullscreen")
+                : t("reader", "toolbar.fullscreen")
+            }
             type="button"
           >
             {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}

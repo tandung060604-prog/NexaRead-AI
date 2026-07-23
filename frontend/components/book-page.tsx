@@ -1,8 +1,10 @@
 "use client";
 
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useLayoutEffect, useMemo, useRef } from "react";
 
 import type { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
+import type { PaginatedBlock } from "@/lib/measured-pagination";
+import { useI18n } from "@/components/i18n-provider";
 
 import { BlockSelection, ReaderBlock } from "./reader-block";
 
@@ -12,9 +14,12 @@ import { BlockSelection, ReaderBlock } from "./reader-block";
 
 export type BookPageProps = {
   /** The content blocks to render on this page. */
-  blocks: ContentBlock[];
+  blocks: PaginatedBlock[];
   /** Page number (1-indexed). */
-  pageNumber: number;
+  pageNumber: number | null;
+  pageKind?: "cover" | "title" | "content" | "blank";
+  documentTitle?: string;
+  chapterTitle?: string | null;
   /** Which side in a two-page spread: left, right, or single. */
   position: "left" | "right" | "single";
   /** CSS page color from room config. */
@@ -28,6 +33,7 @@ export type BookPageProps = {
     lineHeight: number;
     readingWidth: number;
   };
+  pageHeight: number;
   /** CSS class for page-turn animation state. */
   animationClass: string;
   /** Existing reader props forwarded to ReaderBlock. */
@@ -40,6 +46,7 @@ export type BookPageProps = {
   onBookmark: (block: ContentBlock) => void;
   onSelection: (selection: BlockSelection) => void;
   onKeywordSelect: (occurrence: KeywordOccurrence) => void;
+  onOverflow?: (pageNumber: number, overflowPixels: number) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -53,6 +60,7 @@ export function BookPage({
   pageColor,
   pageTextureOpacity,
   style,
+  pageHeight,
   animationClass,
   highlights,
   keywords,
@@ -63,7 +71,13 @@ export function BookPage({
   onBookmark,
   onSelection,
   onKeywordSelect,
+  onOverflow,
+  pageKind = "content",
+  documentTitle = "",
+  chapterTitle = null,
 }: BookPageProps) {
+  const { t } = useI18n();
+  const contentRef = useRef<HTMLDivElement>(null);
   const roomStyles = useMemo(
     () => ({
       "--room-page-color": pageColor,
@@ -78,55 +92,148 @@ export function BookPage({
       ? "0 4px 4px 0"
       : "4px";
 
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content || !onOverflow || pageKind !== "content" || pageNumber === null) return;
+    const frame = requestAnimationFrame(() => {
+      const overflowPixels = content.scrollHeight - content.clientHeight;
+      if (overflowPixels > 1) onOverflow(pageNumber, overflowPixels);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [blocks, onOverflow, pageHeight, pageKind, pageNumber, style]);
+
+  const isChapterOpening =
+    pageKind === "content" &&
+    Boolean(
+      blocks[0]?.block.is_chapter_opening ||
+        blocks[0]?.block.block_type === "HEADING_1",
+    );
+  const pageLabel =
+    pageKind === "cover"
+      ? t("reader", "bookCover")
+      : pageKind === "title"
+        ? t("reader", "bookTitlePage")
+        : pageKind === "blank"
+          ? t("reader", "bookBlankPage")
+          : t("reader", "bookPageLabel", { page: pageNumber ?? "" });
+
   return (
     <div
       className={`book-page flex flex-col ${animationClass}`}
-      data-page={pageNumber}
+      aria-label={pageLabel}
+      data-chapter-opening={isChapterOpening || undefined}
+      data-page={pageNumber ?? undefined}
+      data-page-kind={pageKind}
+      role="group"
       style={{
         ...roomStyles,
         borderRadius,
-        minHeight: "70vh",
-        maxHeight: "85vh",
+        height: `${pageHeight}px`,
         overflow: "hidden",
       }}
     >
-      {/* Page content area */}
-      <div
-        className="flex-1 overflow-y-auto overscroll-contain px-6 py-8 sm:px-10 hide-scrollbar"
-        style={{
-          fontFamily: style.fontFamily,
-          fontSize: `${style.fontSize}px`,
-          lineHeight: style.lineHeight,
-          maxWidth: `${Math.min(style.readingWidth, 600)}px`,
-          marginLeft: "auto",
-          marginRight: "auto",
-          width: "100%",
-        }}
-      >
-        {blocks.length === 0 ? (
-          <EmptyPage />
-        ) : (
-          blocks.map((block) => (
-            <ReaderBlock
-              block={block}
-              bookmarked={bookmarks.has(block.id)}
-              highlighted={highlightedBlock === block.id}
-              highlights={highlights.get(block.id) ?? []}
-              key={block.id}
-              keywords={keywordsEnabled ? keywords.get(block.id) ?? [] : []}
-              onBookmark={onBookmark}
-              onKeywordSelect={onKeywordSelect}
-              onSelection={onSelection}
-              query={highlightQuery}
-            />
-          ))
-        )}
-      </div>
+      {pageKind === "cover" ? (
+        <div className="book-cover flex min-h-0 flex-1 items-center justify-center px-10 text-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] opacity-70">
+              NexaRead
+            </p>
+            <h2 className="mt-8 text-3xl font-semibold leading-tight sm:text-4xl">
+              {documentTitle}
+            </h2>
+          </div>
+        </div>
+      ) : pageKind === "title" ? (
+        <div className="flex min-h-0 flex-1 items-center justify-center px-10 text-center">
+          <div className="max-w-sm">
+            <h2 className="text-2xl font-semibold leading-tight sm:text-3xl">
+              {documentTitle}
+            </h2>
+            <div className="mx-auto mt-8 h-px w-16 bg-current opacity-30" />
+            <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-60">
+              {t("reader", "bookEdition")}
+            </p>
+          </div>
+        </div>
+      ) : pageKind === "blank" ? (
+        <div aria-hidden="true" className="min-h-0 flex-1" />
+      ) : (
+        <div
+          className={`min-h-0 flex-1 overflow-hidden px-6 sm:px-10 ${
+            isChapterOpening ? "pb-8 pt-14 sm:pt-20" : "py-8"
+          }`}
+          data-book-page-content="true"
+          ref={contentRef}
+          style={{
+            fontFamily: style.fontFamily,
+            fontSize: `${style.fontSize}px`,
+            lineHeight: style.lineHeight,
+            maxWidth: `${Math.min(style.readingWidth, 600)}px`,
+            marginLeft: "auto",
+            marginRight: "auto",
+            width: "100%",
+          }}
+        >
+          {chapterTitle && !isChapterOpening ? (
+            <p className="mb-5 truncate text-center text-[0.68em] uppercase tracking-[0.16em] opacity-55">
+              {chapterTitle}
+            </p>
+          ) : null}
+          {blocks.length === 0 ? (
+            <EmptyPage />
+          ) : blocks.map((item) => {
+            const availableHeight = Math.max(1, pageHeight - 116);
+            const scale =
+              item.oversized && item.measuredHeight > 0
+                ? Math.min(1, availableHeight / item.measuredHeight)
+                : 1;
+            return (
+              <div
+                data-oversized-fit={item.oversized || undefined}
+                key={`${item.block.id}:${item.startOffset}:${item.endOffset}`}
+                style={{
+                  height:
+                    scale < 1
+                      ? `${item.measuredHeight * scale}px`
+                      : undefined,
+                  overflow: "visible",
+                }}
+              >
+                <div
+                  style={{
+                    transform: scale < 1 ? `scale(${scale})` : undefined,
+                    transformOrigin: "top left",
+                    width: scale < 1 ? `${100 / scale}%` : undefined,
+                  }}
+                >
+                  <ReaderBlock
+                    block={item.block}
+                    bookmarked={bookmarks.has(item.block.id)}
+                    highlighted={highlightedBlock === item.block.id}
+                    highlights={highlights.get(item.block.id) ?? []}
+                    keywords={
+                      keywordsEnabled ? keywords.get(item.block.id) ?? [] : []
+                    }
+                    onBookmark={onBookmark}
+                    onKeywordSelect={onKeywordSelect}
+                    onSelection={onSelection}
+                    query={highlightQuery}
+                    rangeEnd={item.endOffset}
+                    rangeStart={item.startOffset}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Page footer with page number */}
-      <div className="flex-shrink-0 pb-4 pt-2 text-center">
+      {pageKind === "content" && pageNumber !== null ? (
+      <div className="flex-shrink-0 pb-4 pt-2 text-center" aria-hidden="true">
         <span className="text-xs text-[var(--reader-muted)]">{pageNumber}</span>
       </div>
+      ) : null}
     </div>
   );
 }

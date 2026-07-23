@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useI18n } from "@/components/i18n-provider";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -76,6 +78,7 @@ export function PageTurnController({
   keyboardActive,
   children,
 }: PageTurnControllerProps) {
+  const { t } = useI18n();
   const [animating, setAnimating] = useState(false);
   const animationTimerRef = useRef<number | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -139,12 +142,31 @@ export function PageTurnController({
           event.preventDefault();
           goBackward();
           break;
+        case "Home":
+          event.preventDefault();
+          if (currentPage > 0) onPageChange(0, "backward");
+          break;
+        case "End": {
+          event.preventDefault();
+          const lastPage = Math.floor((totalPages - 1) / pagesPerSpread)
+            * pagesPerSpread;
+          if (lastPage !== currentPage) onPageChange(lastPage, "forward");
+          break;
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [keyboardActive, goForward, goBackward]);
+  }, [
+    currentPage,
+    goBackward,
+    goForward,
+    keyboardActive,
+    onPageChange,
+    pagesPerSpread,
+    totalPages,
+  ]);
 
   // Cleanup animation timer
   useEffect(() => {
@@ -191,8 +213,9 @@ export function PageTurnController({
       onTouchStart={handleTouchStart}
       ref={containerRef}
       role="region"
-      aria-label="Book reader"
-      aria-roledescription="Book view"
+      aria-label={t("reader", "bookRegion")}
+      aria-keyshortcuts="ArrowLeft ArrowRight PageUp PageDown Home End"
+      aria-roledescription={t("reader", "bookRole")}
     >
       {children}
 
@@ -221,25 +244,25 @@ export function PageTurnController({
       {/* Accessible navigation buttons */}
       <div className="mt-4 flex items-center justify-center gap-6">
         <button
-          aria-label="Previous page"
-          className="grid size-10 place-items-center rounded-full border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-foreground)] disabled:opacity-30"
+          aria-label={t("reader", "previousPage")}
+          className="grid size-11 place-items-center rounded-full border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)] focus-visible:ring-offset-2 disabled:opacity-30"
           disabled={!canGoBackward || animating}
           onClick={(event) => { event.stopPropagation(); goBackward(); }}
           type="button"
         >
           ‹
         </button>
-        <span className="text-sm text-[var(--reader-muted)]">
-          {currentPage + 1}
-          {pagesPerSpread > 1 && currentPage + 2 <= totalPages
-            ? `–${currentPage + 2}`
-            : ""}
-          {" of "}
-          {totalPages}
+        <span aria-live="polite" className="text-sm text-[var(--reader-muted)]">
+          {t("reader", "pageRange", {
+            current: pagesPerSpread > 1 && currentPage + 2 <= totalPages
+              ? `${currentPage + 1}–${currentPage + 2}`
+              : currentPage + 1,
+            total: totalPages,
+          })}
         </span>
         <button
-          aria-label="Next page"
-          className="grid size-10 place-items-center rounded-full border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-foreground)] disabled:opacity-30"
+          aria-label={t("reader", "nextPage")}
+          className="grid size-11 place-items-center rounded-full border border-[var(--reader-border)] bg-[var(--reader-surface)] text-[var(--reader-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)] focus-visible:ring-offset-2 disabled:opacity-30"
           disabled={!canGoForward || animating}
           onClick={(event) => { event.stopPropagation(); goForward(); }}
           type="button"

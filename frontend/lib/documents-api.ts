@@ -1,8 +1,12 @@
+import { authenticatedFetch } from "@/lib/auth-api";
+import type { ReadingMode } from "@/lib/reading-preferences";
+
 export type DocumentVersion = {
   id: string;
   version_number: number;
   content_hash: string;
   page_count: number | null;
+  cover_source: string | null;
   created_at: string;
 };
 
@@ -26,24 +30,85 @@ export type DocumentSummary = {
   source_url: string | null;
   mime_type: string;
   file_size: number;
+  collection_id: string | null;
   layout_type: string;
   layout_override: string | null;
+  document_type_override: string | null;
   status: string;
   created_at: string;
   updated_at: string;
   last_read_at: string | null;
+  archived_at: string | null;
+  cover_url: string;
 };
 
 export type DocumentDetail = DocumentSummary & {
   versions: DocumentVersion[];
   processing_jobs: ProcessingJob[];
+  processing_result: DocumentProcessingResult | null;
+};
+
+export type DocumentProcessingResult = {
+  detected_document_type: string;
+  effective_document_type: string;
+  document_type_override: string | null;
+  language: string;
+  source_page_count: number;
+  chapter_count: number;
+  layout_quality: string;
+  layout_quality_score: number | null;
+  warnings: string[];
+};
+
+export type CollectionSummary = {
+  id: string;
+  name: string;
+};
+
+export type Collection = CollectionSummary & {
+  document_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Tag = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export type LibraryDocument = DocumentSummary & {
+  collection: CollectionSummary | null;
+  tags: Tag[];
+  progress_percent: number;
+  language: string;
+  completed: boolean;
 };
 
 export type DocumentList = {
-  items: DocumentSummary[];
+  items: LibraryDocument[];
   total: number;
   limit: number;
   offset: number;
+};
+
+export type LibraryQuery = {
+  search?: string;
+  sort?: "newest" | "recent" | "title" | "progress";
+  source_type?: string;
+  status?: string;
+  collection_id?: string;
+  tag_id?: string;
+  language?: string;
+  completion?: "completed" | "in_progress" | "unread";
+  archived?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
+export type DocumentUploadOptions = {
+  document_type_override?: string | null;
+  collection_id?: string | null;
 };
 
 export type ProcessingStatus = {
@@ -54,6 +119,7 @@ export type ProcessingStatus = {
   error_code: string | null;
   error_message: string | null;
   page_count: number | null;
+  completed_stages: string[];
 };
 
 export type TocItem = {
@@ -81,6 +147,32 @@ export type ContentBlock = {
     | "FORMULA"
     | "IMAGE";
   text: string;
+  source_text: string;
+  display_text: string;
+  transformation_log: Array<Record<string, unknown>>;
+  transformation_confidence: number;
+  needs_review: boolean;
+  source_anchor: {
+    page_number?: number;
+    bounding_box?: number[];
+    source_block_ids?: string[];
+    source_start_offset?: number;
+    source_end_offset?: number;
+    [key: string]: unknown;
+  };
+  semantic_role: string;
+  heading_level: number | null;
+  keep_with_next: boolean;
+  avoid_break_inside: boolean;
+  break_before: boolean;
+  break_after: boolean;
+  indent_level: number;
+  text_align: "left" | "right" | "center" | "justify" | "start" | "end";
+  is_first_paragraph: boolean;
+  is_chapter_opening: boolean;
+  caption_for_asset_id: string | null;
+  footnote_reference: string | null;
+  source_page_number: number;
   page_number: number;
   chapter_index: number | null;
   section_index: number | null;
@@ -119,7 +211,7 @@ export type ReadingProgress = {
   page_number: number;
   progress_percent: number;
   scroll_offset: number;
-  reading_mode: string;
+  reading_mode: ReadingMode;
   updated_at: string;
 };
 
@@ -173,10 +265,29 @@ export type ReadingPreferences = {
   reading_width: number;
   font_family: "sans" | "serif" | "dyslexic";
   focus_mode: boolean;
+  reading_mode: ReadingMode;
+  reading_room: string;
+  page_turn_animation: boolean;
+  page_turn_sound: boolean;
+  ambient_sound: boolean;
+  master_volume: number;
+  ambient_volume: number;
+  page_turn_volume: number;
+  language: "vi" | "en";
+  keyword_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
+  use_document_type_defaults: boolean;
+  analytics_enabled: boolean;
   updated_at: string | null;
 };
 
-export type ReadingPreferencesInput = Omit<ReadingPreferences, "id" | "updated_at">;
+export type ReadingPreferencesInput = Pick<
+  ReadingPreferences,
+  "theme" | "font_size" | "line_height" | "reading_width" | "font_family" | "focus_mode"
+>;
+export type AccountReadingPreferencesInput = Omit<
+  ReadingPreferences,
+  "id" | "updated_at"
+>;
 
 export type KeywordLevel = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type KeywordFeedbackType =
@@ -246,13 +357,17 @@ export type KeywordPreferencesInput = Omit<
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
+  const response = await authenticatedFetch(`${API_URL}${path}`, init);
   if (!response.ok) {
     let message = "The request could not be completed.";
     try {
-      const body = (await response.json()) as { detail?: string };
-      if (body.detail) {
+      const body = (await response.json()) as {
+        detail?: string | { code?: string };
+      };
+      if (typeof body.detail === "string") {
         message = body.detail;
+      } else if (body.detail?.code) {
+        message = body.detail.code;
       }
     } catch {
       // Keep the generic message when the API does not return JSON.
@@ -266,25 +381,96 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function uploadDocument(file: File): Promise<DocumentDetail> {
+export function uploadDocument(
+  file: File,
+  options: DocumentUploadOptions = {},
+): Promise<DocumentDetail> {
   const formData = new FormData();
   formData.append("file", file);
+  if (options.document_type_override) {
+    formData.append("document_type_override", options.document_type_override);
+  }
+  if (options.collection_id) {
+    formData.append("collection_id", options.collection_id);
+  }
   return apiRequest<DocumentDetail>("/api/documents/upload", {
     method: "POST",
     body: formData,
   });
 }
 
-export function importDocumentUrl(url: string): Promise<DocumentDetail> {
+export function importDocumentUrl(
+  url: string,
+  options: DocumentUploadOptions = {},
+): Promise<DocumentDetail> {
   return apiRequest<DocumentDetail>("/api/documents/import-url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({
+      url,
+      document_type_override: options.document_type_override ?? null,
+      collection_id: options.collection_id ?? null,
+    }),
   });
 }
 
-export function fetchDocuments(): Promise<DocumentList> {
-  return apiRequest<DocumentList>("/api/documents?limit=50&offset=0");
+export function fetchDocuments(query: LibraryQuery = {}): Promise<DocumentList> {
+  const parameters = new URLSearchParams({
+    limit: String(query.limit ?? 50),
+    offset: String(query.offset ?? 0),
+  });
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && key !== "limit" && key !== "offset") {
+      parameters.set(key, String(value));
+    }
+  }
+  return apiRequest<DocumentList>(`/api/documents?${parameters}`);
+}
+
+export function documentCoverUrl(documentId: string): string {
+  return `${API_URL}/api/documents/${documentId}/cover`;
+}
+
+export function fetchCollections(): Promise<Collection[]> {
+  return apiRequest<Collection[]>("/api/collections");
+}
+
+export function createCollection(name: string): Promise<Collection> {
+  return apiRequest<Collection>("/api/collections", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function fetchTags(): Promise<Tag[]> {
+  return apiRequest<Tag[]>("/api/tags");
+}
+
+export function createTag(name: string): Promise<Tag> {
+  return apiRequest<Tag>("/api/tags", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function organizeDocument(
+  documentId: string,
+  update: {
+    collection_id?: string | null;
+    tag_ids?: string[];
+    archived?: boolean;
+  },
+): Promise<LibraryDocument> {
+  return apiRequest<LibraryDocument>(
+    `/api/documents/${documentId}/organization`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(update),
+    },
+  );
 }
 
 export function fetchDocument(documentId: string): Promise<DocumentDetail> {
@@ -296,6 +482,23 @@ export function renameDocument(documentId: string, title: string): Promise<Docum
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
+  });
+}
+
+export function setDocumentTypeOverride(
+  documentId: string,
+  documentTypeOverride: string | null,
+): Promise<DocumentDetail> {
+  return apiRequest<DocumentDetail>(`/api/documents/${documentId}/document-type`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ document_type_override: documentTypeOverride }),
+  });
+}
+
+export function reprocessDocument(documentId: string): Promise<DocumentDetail> {
+  return apiRequest<DocumentDetail>(`/api/documents/${documentId}/reprocess`, {
+    method: "POST",
   });
 }
 
@@ -430,7 +633,7 @@ export function fetchReadingPreferences(): Promise<ReadingPreferences> {
 }
 
 export function saveReadingPreferences(
-  preferences: ReadingPreferencesInput,
+  preferences: AccountReadingPreferencesInput,
 ): Promise<ReadingPreferences> {
   return apiRequest<ReadingPreferences>("/api/users/me/reading-preferences", {
     method: "PUT",

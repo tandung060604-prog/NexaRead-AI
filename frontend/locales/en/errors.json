@@ -1,0 +1,12 @@
+{
+  "REQUEST_FAILED": "The request could not be completed.",
+  "AUTH_EMAIL_ALREADY_EXISTS": "This email is already in use.",
+  "AUTH_INVALID_CREDENTIALS": "The email or password is incorrect.",
+  "AUTH_RATE_LIMITED": "Too many attempts. Please wait a minute.",
+  "AUTH_RATE_LIMIT_UNAVAILABLE": "Sign-in is temporarily unavailable. Please try again.",
+  "AUTH_REQUIRED": "Please log in to continue.",
+  "AUTH_SESSION_EXPIRED": "Your session expired. Please log in again.",
+  "AUTH_SESSION_REVOKED": "This session has been revoked.",
+  "AUTH_CSRF_INVALID": "The security request is invalid. Please reload the page.",
+  "UNKNOWN": "Something went wrong. Please try again."
+}

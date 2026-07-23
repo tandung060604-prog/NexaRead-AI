@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Menu, MessageSquare, Search, Settings2, StickyNote, Tags, X } from "lucide-react";
+import { LibraryBig, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, Search, Settings2, StickyNote, Tags, X } from "lucide-react";
 import Link from "next/link";
 import {
   FormEvent,
@@ -13,7 +13,9 @@ import {
   useState,
 } from "react";
 
+import { useI18n } from "@/components/i18n-provider";
 import {
+  AccountReadingPreferencesInput,
   Bookmark,
   ContentBlock,
   DocumentDetail,
@@ -54,7 +56,16 @@ import {
   searchDocument,
   updateNote,
 } from "@/lib/documents-api";
+import { useDialogFocusTrap } from "@/lib/dialog-focus";
 import { navigateToBlock } from "@/lib/reader-navigation";
+import {
+  normalizeReadingMode,
+  type ReadingMode,
+} from "@/lib/reading-preferences";
+import {
+  getDocumentReadingDefaults,
+  resolveReaderFontFamily,
+} from "@/lib/reader-personalization";
 
 import { BlockSelection, ReaderBlock } from "./reader-block";
 import { KeywordGlossary } from "./keyword-glossary";
@@ -66,14 +77,23 @@ import {
 import { BookReader } from "./book-reader";
 import { DocumentChat } from "./document-chat";
 import { ReaderToolbar } from "./reader-toolbar";
+import { ResearchReferencePanel } from "./research-reference-panel";
 import { useReadingRoom } from "./reading-room-provider";
 import { PageTurnSound } from "@/lib/page-turn-sound";
 import { getPresetById } from "@/config/typography-presets";
 
 type DocumentReaderProps = { documentId: string };
-type MobilePanel = "toc" | "chat" | "search" | "keywords" | "annotations" | "settings" | null;
+type MobilePanel = "toc" | "chat" | "search" | "keywords" | "annotations" | "references" | "settings" | null;
+type ToolTab = "chat" | "search" | "annotations" | "keywords" | "references";
 
-const PROCESSING_STATES = new Set(["UPLOADED", "QUEUED", "EXTRACTING", "STRUCTURING", "INDEXING"]);
+const PROCESSING_STATES = new Set([
+  "UPLOADED",
+  "QUEUED",
+  "SAFETY_CHECK",
+  "EXTRACTING",
+  "STRUCTURING",
+  "INDEXING",
+]);
 const DEFAULT_PREFERENCES: ReadingPreferencesInput = {
   theme: "light",
   font_size: 17,
@@ -92,6 +112,54 @@ const DEFAULT_KEYWORD_PREFERENCES: KeywordPreferences = {
   updated_at: null,
 };
 
+type PreferenceSnapshot = Omit<
+  AccountReadingPreferencesInput,
+  "analytics_enabled" | "use_document_type_defaults"
+>;
+
+function buildPreferenceSnapshot({
+  ambientEnabled,
+  ambientVolume,
+  focusMode,
+  keywordLevel,
+  language,
+  masterVolume,
+  pageTurnEnabled,
+  pageTurnSoundEnabled,
+  pageTurnVolume,
+  preferences,
+  readingMode,
+  readingRoom,
+}: {
+  ambientEnabled: boolean;
+  ambientVolume: number;
+  focusMode: boolean;
+  keywordLevel: AccountReadingPreferencesInput["keyword_level"];
+  language: AccountReadingPreferencesInput["language"];
+  masterVolume: number;
+  pageTurnEnabled: boolean;
+  pageTurnSoundEnabled: boolean;
+  pageTurnVolume: number;
+  preferences: ReadingPreferencesInput;
+  readingMode: ReadingMode;
+  readingRoom: string;
+}): PreferenceSnapshot {
+  return {
+    ...preferences,
+    ambient_sound: ambientEnabled,
+    ambient_volume: ambientVolume,
+    focus_mode: focusMode,
+    keyword_level: keywordLevel,
+    language,
+    master_volume: masterVolume,
+    page_turn_animation: pageTurnEnabled,
+    page_turn_sound: pageTurnSoundEnabled,
+    page_turn_volume: pageTurnVolume,
+    reading_mode: readingMode,
+    reading_room: readingRoom,
+  };
+}
+
 async function fetchAllBlocks(documentId: string): Promise<ContentBlock[]> {
   const firstPage = await fetchBlocks(documentId);
   const blocks = [...firstPage.items];
@@ -102,17 +170,33 @@ async function fetchAllBlocks(documentId: string): Promise<ContentBlock[]> {
   return blocks;
 }
 
-function TableOfContents({ items, onNavigate }: { items: TocItem[]; onNavigate: (item: TocItem) => void }) {
+function TableOfContents({
+  items,
+  label,
+  onNavigate,
+}: {
+  items: TocItem[];
+  label?: string;
+  onNavigate: (item: TocItem) => void;
+}) {
+  const { t } = useI18n();
   if (items.length === 0) {
-    return <p className="text-sm leading-6 text-[var(--reader-muted)]">No table of contents detected.</p>;
+    return (
+      <p className="text-sm leading-6 text-[var(--reader-muted)]">
+        {t("reader", "tocEmpty")}
+      </p>
+    );
   }
   return (
-    <nav aria-label="Table of contents">
+    <nav aria-label={label ?? t("reader", "toc")}>
       <ol className="space-y-1">
         {items.map((item) => (
           <li key={`${item.block_id}-${item.sequence_number}`}>
             <button
-              aria-label={`${item.title}, page ${item.page_number}`}
+              aria-label={t("reader", "tocItem", {
+                title: item.title,
+                page: item.page_number,
+              })}
               className="w-full py-1.5 text-left text-sm leading-5 hover:text-[var(--reader-accent)]"
               onClick={() => onNavigate(item)}
               style={{ paddingLeft: `${(item.level - 1) * 14}px` }}
@@ -147,26 +231,31 @@ export function SearchPanel({
   onResult: (block: ContentBlock) => void;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-[var(--reader-border)] p-4">
-        <h2 className="text-lg font-semibold text-[var(--reader-foreground)]">Search</h2>
-        <button aria-label="Close search" className="text-[var(--reader-muted)] transition-colors hover:text-[var(--reader-foreground)] lg:hidden" onClick={onClose} title="Close" type="button"><X size={20} /></button>
+        <h2 className="text-lg font-semibold text-[var(--reader-foreground)]">{t("reader", "panels.search")}</h2>
+        <button aria-label={t("reader", "panels.closeSearch")} className="text-[var(--reader-muted)] transition-colors hover:text-[var(--reader-foreground)] lg:hidden" onClick={onClose} title={t("common", "actions.close")} type="button"><X size={20} /></button>
       </div>
       <form className="m-4 flex items-center overflow-hidden rounded-md border border-[var(--reader-border)] focus-within:border-[var(--reader-accent)]" onSubmit={onSearch}>
-        <input aria-label="Search document" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none" onChange={(event) => onQueryChange(event.target.value)} placeholder="Search text" value={query} />
-        <button aria-label="Run search" className="grid size-10 place-items-center border-l border-[var(--reader-border)]" disabled={isSearching} title="Search" type="submit"><Search size={16} /></button>
+        <input aria-label={t("reader", "panels.searchDocument")} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm outline-none" onChange={(event) => onQueryChange(event.target.value)} placeholder={t("reader", "panels.searchText")} value={query} />
+        <button aria-label={t("reader", "panels.runSearch")} className="grid size-10 place-items-center border-l border-[var(--reader-border)]" disabled={isSearching} title={t("reader", "panels.search")} type="submit"><Search size={16} /></button>
       </form>
       {error ? <p className="mt-2 text-sm text-[var(--danger)]" role="alert">{error}</p> : null}
       {results ? (
         <div className="mt-4">
-          <p className="text-xs font-semibold uppercase text-[var(--reader-muted)]">{results.total} results</p>
+          <p className="text-xs font-semibold uppercase text-[var(--reader-muted)]">
+            {t("reader", "searchResults", { count: results.total })}
+          </p>
           <ol className="mt-2 divide-y divide-[var(--reader-border)]">
             {results.items.map((block) => (
               <li key={block.id}>
                 <button className="w-full py-3 text-left text-sm leading-5" onClick={() => onResult(block)} type="button">
                   <span className="line-clamp-3">{block.text}</span>
-                  <span className="mt-1 block text-xs text-[var(--reader-muted)]">Page {block.page_number}</span>
+                  <span className="mt-1 block text-xs text-[var(--reader-muted)]">
+                    {t("reader", "sourcePage")} {block.source_page_number}
+                  </span>
                 </button>
               </li>
             ))}
@@ -178,7 +267,15 @@ export function SearchPanel({
 }
 
 export function DocumentReader({ documentId }: DocumentReaderProps) {
-  const { room, readingMode, preferences: immersivePrefs, reducedMotion } = useReadingRoom();
+  const { locale, t } = useI18n();
+  const {
+    room,
+    readingMode,
+    setReadingMode,
+    updatePreferences: updateImmersivePreferences,
+    preferences: immersivePrefs,
+    reducedMotion,
+  } = useReadingRoom();
   const pageTurnSound = useRef<PageTurnSound | null>(null);
 
   useEffect(() => {
@@ -195,6 +292,29 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
       pageTurnSound.current?.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    const sound = pageTurnSound.current;
+    if (!sound) return;
+    sound.setEnabled(immersivePrefs.pageTurnSoundEnabled);
+    sound.setVolume(
+      immersivePrefs.pageTurnVolume * immersivePrefs.masterVolume,
+    );
+    const syncVisibility = () => {
+      sound.setMuted(
+        immersivePrefs.muteAll || window.document.visibilityState === "hidden",
+      );
+    };
+    syncVisibility();
+    window.document.addEventListener("visibilitychange", syncVisibility);
+    return () =>
+      window.document.removeEventListener("visibilitychange", syncVisibility);
+  }, [
+    immersivePrefs.masterVolume,
+    immersivePrefs.muteAll,
+    immersivePrefs.pageTurnSoundEnabled,
+    immersivePrefs.pageTurnVolume,
+  ]);
   const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [processing, setProcessing] = useState<ProcessingStatus | null>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
@@ -217,7 +337,15 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
   const [highlightedBlock, setHighlightedBlock] = useState<string | null>(null);
   const [highlightQuery, setHighlightQuery] = useState("");
   const [activePage, setActivePage] = useState(1);
+  const [activeReadingPage, setActiveReadingPage] = useState(1);
+  const [bookNavigationTarget, setBookNavigationTarget] = useState<{
+    blockId: string;
+    requestId: number;
+  } | null>(null);
+  const [tocCollapsed, setTocCollapsed] = useState(false);
+  const [activeToolTab, setActiveToolTab] = useState<ToolTab>("chat");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selection, setSelection] = useState<BlockSelection | null>(null);
   const [progressState, setProgressState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const scrollParentRef = useRef<HTMLDivElement>(null);
@@ -225,6 +353,9 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
   const progressTimerRef = useRef<number | undefined>(undefined);
   const preferencesTimerRef = useRef<number | undefined>(undefined);
   const latestProgressRef = useRef<ProgressInput | null>(null);
+  const accountPreferencesLoadedRef = useRef(false);
+  const analyticsEnabledRef = useRef(false);
+  const savedPreferenceSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -259,16 +390,65 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
             setKeywords(keywordResult.items);
             setKeywordPreferences(keywordPreferenceResult);
             setKeywordLoading(false);
-            setPreferences({
+            const accountVisualPreferences: ReadingPreferencesInput = {
               theme: preferenceResult.theme,
               font_size: preferenceResult.font_size,
               line_height: preferenceResult.line_height,
               reading_width: preferenceResult.reading_width,
               font_family: preferenceResult.font_family,
               focus_mode: preferenceResult.focus_mode,
+            };
+            const documentType =
+              documentResult.processing_result?.effective_document_type ??
+              documentResult.document_type_override ??
+              documentResult.layout_override ??
+              documentResult.layout_type;
+            const typeDefaults =
+              (preferenceResult.use_document_type_defaults ?? true)
+                ? getDocumentReadingDefaults(documentType)
+                : null;
+            const resolvedVisualPreferences = {
+              ...accountVisualPreferences,
+              ...typeDefaults?.preferences,
+            };
+            const resolvedReadingMode = progressResult
+              ? normalizeReadingMode(progressResult.reading_mode)
+              : typeDefaults?.readingMode ?? preferenceResult.reading_mode;
+            setPreferences(resolvedVisualPreferences);
+            setActiveToolTab(typeDefaults?.preferredTool ?? "chat");
+            updateImmersivePreferences({
+              selectedRoom: preferenceResult.reading_room,
+              readingMode: resolvedReadingMode,
+              pageTurnEnabled: preferenceResult.page_turn_animation,
+              pageTurnSoundEnabled: preferenceResult.page_turn_sound,
+              ambientEnabled: preferenceResult.ambient_sound,
+              masterVolume: preferenceResult.master_volume,
+              ambientVolume: preferenceResult.ambient_volume,
+              pageTurnVolume: preferenceResult.page_turn_volume,
+              focusMode: preferenceResult.focus_mode,
             });
+            analyticsEnabledRef.current =
+              preferenceResult.analytics_enabled ?? false;
+            savedPreferenceSnapshotRef.current = JSON.stringify(
+              buildPreferenceSnapshot({
+                ambientEnabled: preferenceResult.ambient_sound,
+                ambientVolume: preferenceResult.ambient_volume,
+                focusMode: preferenceResult.focus_mode,
+                keywordLevel: keywordPreferenceResult.user_level,
+                language: locale,
+                masterVolume: preferenceResult.master_volume,
+                pageTurnEnabled: preferenceResult.page_turn_animation,
+                pageTurnSoundEnabled: preferenceResult.page_turn_sound,
+                pageTurnVolume: preferenceResult.page_turn_volume,
+                preferences: resolvedVisualPreferences,
+                readingMode: resolvedReadingMode,
+                readingRoom: preferenceResult.reading_room,
+              }),
+            );
+            accountPreferencesLoadedRef.current = true;
             if (progressResult) {
               setInitialProgress(progressResult);
+              setReadingMode(normalizeReadingMode(progressResult.reading_mode));
             } else {
               const legacy = window.localStorage.getItem(`nexaread:reader-progress:${documentId}`);
               if (legacy) {
@@ -280,7 +460,7 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
                     page_number: parsed.page_number ?? 1,
                     progress_percent: parsed.progress_percent ?? 0,
                     scroll_offset: parsed.scroll_offset ?? 0,
-                    reading_mode: "standard",
+                    reading_mode: "clean",
                   });
                 } catch {
                   window.localStorage.removeItem(`nexaread:reader-progress:${documentId}`);
@@ -288,11 +468,23 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
               }
             }
           }).catch((loadError: unknown) => {
-            if (active) setError(loadError instanceof Error ? loadError.message : "Could not load reader content.");
+            if (active) {
+              setError(
+                loadError instanceof Error
+                  ? loadError.message
+                  : t("reader", "loadContentError"),
+              );
+            }
           });
         })
         .catch((loadError: unknown) => {
-          if (active) setError(loadError instanceof Error ? loadError.message : "Could not load document reader.");
+          if (active) {
+            setError(
+              loadError instanceof Error
+                ? loadError.message
+                : t("reader", "loadReaderError"),
+            );
+          }
         });
     };
     timer = window.setTimeout(load, 0);
@@ -300,7 +492,13 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
       active = false;
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [documentId]);
+  }, [
+    documentId,
+    locale,
+    setReadingMode,
+    t,
+    updateImmersivePreferences,
+  ]);
 
   const visibleBlocks = useMemo(() => blocks.filter((block) => block.metadata.suppressed !== true), [blocks]);
   const blocksById = useMemo(() => new Map(visibleBlocks.map((block) => [block.id, block])), [visibleBlocks]);
@@ -343,7 +541,12 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     if (!block) return;
     setHighlightedBlock(block.id);
     setHighlightQuery(searchTerm);
-    setActivePage(block.page_number);
+    setActivePage(block.source_page_number || block.page_number);
+    setActiveReadingPage(Math.max(1, visibleBlocks.indexOf(block) + 1));
+    setBookNavigationTarget((current) => ({
+      blockId: block.id,
+      requestId: (current?.requestId ?? 0) + 1,
+    }));
     setMobilePanel(null);
   }, [virtualizer, visibleBlocks]);
 
@@ -376,14 +579,15 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     const block = visibleBlocks[currentVirtualIndex];
     const versionId = document.versions.at(-1)?.id;
     if (!block || !versionId) return;
-    setActivePage(block.page_number);
+    setActivePage(block.source_page_number || block.page_number);
+    setActiveReadingPage(currentVirtualIndex + 1);
     latestProgressRef.current = {
       document_version_id: versionId,
       last_block_id: block.id,
-      page_number: block.page_number,
+      page_number: block.source_page_number || block.page_number,
       progress_percent: visibleBlocks.length ? Math.round(((currentVirtualIndex + 1) / visibleBlocks.length) * 100) : 0,
       scroll_offset: readerScrollOffset,
-      reading_mode: preferences.focus_mode ? "focus" : "standard",
+      reading_mode: readingMode,
     };
     setProgressState("idle");
     if (progressTimerRef.current !== undefined) window.clearTimeout(progressTimerRef.current);
@@ -392,7 +596,7 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     currentVirtualIndex,
     document,
     persistProgress,
-    preferences.focus_mode,
+    readingMode,
     readerScrollOffset,
     visibleBlocks,
   ]);
@@ -411,9 +615,53 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
 
   function changePreferences(next: ReadingPreferencesInput) {
     setPreferences(next);
-    if (preferencesTimerRef.current !== undefined) window.clearTimeout(preferencesTimerRef.current);
-    preferencesTimerRef.current = window.setTimeout(() => void saveReadingPreferences(next), 650);
   }
+
+  useEffect(() => {
+    if (!accountPreferencesLoadedRef.current) return;
+    const snapshot = buildPreferenceSnapshot({
+      ambientEnabled: immersivePrefs.ambientEnabled,
+      ambientVolume: immersivePrefs.ambientVolume,
+      focusMode: immersivePrefs.focusMode,
+      keywordLevel: keywordPreferences.user_level,
+      language: locale,
+      masterVolume: immersivePrefs.masterVolume,
+      pageTurnEnabled: immersivePrefs.pageTurnEnabled,
+      pageTurnSoundEnabled: immersivePrefs.pageTurnSoundEnabled,
+      pageTurnVolume: immersivePrefs.pageTurnVolume,
+      preferences,
+      readingMode,
+      readingRoom: immersivePrefs.selectedRoom,
+    });
+    const serializedSnapshot = JSON.stringify(snapshot);
+    if (serializedSnapshot === savedPreferenceSnapshotRef.current) return;
+    if (preferencesTimerRef.current !== undefined) window.clearTimeout(preferencesTimerRef.current);
+    preferencesTimerRef.current = window.setTimeout(() => {
+      savedPreferenceSnapshotRef.current = serializedSnapshot;
+      void saveReadingPreferences({
+        ...snapshot,
+        analytics_enabled: analyticsEnabledRef.current,
+        use_document_type_defaults: false,
+      }).catch(() => {
+        if (savedPreferenceSnapshotRef.current === serializedSnapshot) {
+          savedPreferenceSnapshotRef.current = null;
+        }
+      });
+    }, 650);
+  }, [
+    immersivePrefs.ambientEnabled,
+    immersivePrefs.ambientVolume,
+    immersivePrefs.focusMode,
+    immersivePrefs.masterVolume,
+    immersivePrefs.pageTurnEnabled,
+    immersivePrefs.pageTurnSoundEnabled,
+    immersivePrefs.pageTurnVolume,
+    immersivePrefs.selectedRoom,
+    keywordPreferences.user_level,
+    locale,
+    preferences,
+    readingMode,
+  ]);
 
   async function toggleBookmark(block: ContentBlock) {
     const existing = bookmarkByBlock.get(block.id);
@@ -474,7 +722,11 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
       setKeywordDetail(await fetchKeywordDetail(occurrence.keyword.id));
       if (window.innerWidth < 1024) setMobilePanel("keywords");
     } catch (selectionError) {
-      setKeywordError(selectionError instanceof Error ? selectionError.message : "Could not load glossary entry.");
+      setKeywordError(
+        selectionError instanceof Error
+          ? selectionError.message
+          : t("reader", "glossaryLoadError"),
+      );
     }
   }
 
@@ -488,7 +740,11 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
       setKeywords(refreshed.items);
       if (selectedKeyword) setKeywordDetail(await fetchKeywordDetail(selectedKeyword.keyword.id));
     } catch (preferenceError) {
-      setKeywordError(preferenceError instanceof Error ? preferenceError.message : "Could not save keyword settings.");
+      setKeywordError(
+        preferenceError instanceof Error
+          ? preferenceError.message
+          : t("reader", "glossarySaveError"),
+      );
     } finally {
       setKeywordLoading(false);
     }
@@ -509,7 +765,7 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     event.preventDefault();
     const normalized = query.trim();
     if (normalized.length < 2) {
-      setSearchError("Enter at least 2 characters.");
+      setSearchError(t("reader", "searchMinimum"));
       return;
     }
     setIsSearching(true);
@@ -517,14 +773,19 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
     try {
       setResults(await searchDocument(documentId, normalized));
     } catch (searchFailure) {
-      setSearchError(searchFailure instanceof Error ? searchFailure.message : "Search failed.");
+      setSearchError(
+        searchFailure instanceof Error
+          ? searchFailure.message
+          : t("reader", "searchFailed"),
+      );
     } finally {
       setIsSearching(false);
     }
   }
 
-  const handleBookPageChange = useCallback((pageNumber: number, blockId: string) => {
+  const handleBookPageChange = useCallback((pageNumber: number, blockId: string, readingPageNumber: number) => {
     setActivePage(pageNumber);
+    setActiveReadingPage(readingPageNumber);
     const versionId = document?.versions.at(-1)?.id;
     if (!versionId) return;
     latestProgressRef.current = {
@@ -533,35 +794,86 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
       page_number: pageNumber,
       progress_percent: processing?.page_count ? Math.round((pageNumber / processing.page_count) * 100) : 0,
       scroll_offset: 0,
-      reading_mode: immersivePrefs.focusMode ? "focus" : "standard",
+      reading_mode: readingMode,
     };
     setProgressState("idle");
     if (progressTimerRef.current !== undefined) window.clearTimeout(progressTimerRef.current);
     progressTimerRef.current = window.setTimeout(() => void persistProgress(), 1500);
-  }, [document, processing, immersivePrefs.focusMode, persistProgress]);
+  }, [document, processing, readingMode, persistProgress]);
 
   if (error) return <p className="w-full border-l-4 border-[var(--danger)] bg-[var(--danger-soft)] p-5" role="alert">{error}</p>;
-  if (!document || !processing) return <div aria-label="Loading reader" className="h-72 w-full animate-pulse bg-[var(--surface-muted)]" />;
+  if (!document || !processing) return <div aria-label={t("reader", "loading")} className="h-72 w-full animate-pulse bg-[var(--surface-muted)]" />;
   const pdfLink = originalPdfUrl(documentId);
-  if (processing.status === "OCR_REQUIRED") return <ReaderState pdfLink={pdfLink} title={document.title}>PDF này không chứa đủ nội dung text để trích xuất. OCR chưa được hỗ trợ, nhưng bạn vẫn có thể xem bản PDF gốc.</ReaderState>;
-  if (processing.status === "FAILED") return <ReaderState pdfLink={pdfLink} title={document.title} tone="danger">Không thể xử lý tài liệu. File gốc vẫn được giữ an toàn.</ReaderState>;
+  if (processing.status === "OCR_REQUIRED") return <ReaderState pdfLink={pdfLink} title={document.title}>{t("reader", "ocrRequired")}</ReaderState>;
+  if (processing.status === "FAILED") return <ReaderState pdfLink={pdfLink} title={document.title} tone="danger">{t("reader", "processingFailed")}</ReaderState>;
   if (PROCESSING_STATES.has(processing.status)) {
-    return <div className="w-full"><ReaderToolbar activePage={activePage} backHref={`/documents/${document.id}`} pageCount={processing.page_count} progressState="idle" title={document.title} /><section className="mt-10 border-y border-[var(--border)] py-10" aria-live="polite"><p className="text-sm font-semibold uppercase text-[var(--accent-strong)]">Processing document</p><h2 className="mt-2 text-2xl font-semibold">{processing.stage}</h2><div className="mt-5 h-2 max-w-xl bg-[var(--surface-muted)]"><div className="h-full bg-[var(--accent)]" style={{ width: `${processing.progress}%` }} /></div><p className="mt-2 text-sm text-[var(--muted)]">{processing.progress}% complete</p></section></div>;
+    return <div className="w-full"><ReaderToolbar activePage={activePage} backHref={`/documents/${document.id}`} pageCount={processing.page_count} progressState="idle" title={document.title} /><section className="mt-10 border-y border-[var(--border)] py-10" aria-live="polite"><p className="text-sm font-semibold uppercase text-[var(--accent-strong)]">{t("reader", "processing")}</p><h2 className="mt-2 text-2xl font-semibold">{t("reader", `processingStages.${processing.stage.toUpperCase()}`)}</h2><div className="mt-5 h-2 max-w-xl bg-[var(--surface-muted)]"><div className="h-full bg-[var(--accent)]" style={{ width: `${processing.progress}%` }} /></div><p className="mt-2 text-sm text-[var(--muted)]">{processing.progress}% {t("reader", "progressComplete")}</p></section></div>;
   }
 
+  const effectiveDocumentType =
+    document.processing_result?.effective_document_type ??
+    document.document_type_override ??
+    document.layout_override ??
+    document.layout_type;
+  const documentDefaults = getDocumentReadingDefaults(effectiveDocumentType);
+  const isResearchDocument = documentDefaults?.preferredTool === "references";
+  const contentsLabel =
+    documentDefaults?.navigationStyle === "legal"
+      ? t("reader", "panels.legalContents")
+      : t("reader", "panels.contents");
   const searchPanel = <SearchPanel error={searchError} isSearching={isSearching} onClose={() => setMobilePanel(null)} onQueryChange={setQuery} onResult={(block) => void navigate(block.id, results?.query)} onSearch={handleSearch} query={query} results={results} />;
   const annotationPanel = <AnnotationPanel blocksById={blocksById} bookmarks={bookmarks} highlights={highlights} onDeleteBookmark={(bookmark) => void toggleBookmark(blocksById.get(bookmark.content_block_id)!)} onDeleteHighlight={(highlight) => void removeHighlight(highlight)} onDeleteNote={removeNoteFromHighlight} onNavigate={(blockId) => void navigate(blockId)} onSaveNote={saveNoteForHighlight} />;
   const keywordPanel = <KeywordGlossary detail={keywordDetail} error={keywordError} loading={keywordLoading} occurrences={keywords} onFeedback={sendKeywordFeedback} onNavigate={(occurrence) => void navigate(occurrence.content_block_id)} onPreferences={(next) => void changeKeywordPreferences(next)} onSelect={(occurrence) => void selectKeyword(occurrence)} preferences={keywordPreferences} selected={selectedKeyword} />;
   const chatPanel = <DocumentChat documentId={documentId} onCitation={(blockId) => void navigate(blockId)} />;
+  const referencePanel = <ResearchReferencePanel blocks={visibleBlocks} onNavigate={(blockId) => void navigate(blockId)} toc={toc} />;
+  const activeToolPanel =
+    activeToolTab === "chat"
+      ? chatPanel
+      : activeToolTab === "search"
+        ? searchPanel
+        : activeToolTab === "annotations"
+          ? annotationPanel
+          : activeToolTab === "references"
+            ? referencePanel
+            : keywordPanel;
 
   const preset = getPresetById(immersivePrefs.typographyPreset || room.typographyPreset);
-  const fontFamily = preset.fontBody;
+  const fontFamily = resolveReaderFontFamily(
+    preferences.font_family,
+    preset.fontBody,
+  );
   const isFocusMode = immersivePrefs.focusMode;
-  const gridClass = isFocusMode ? "grid-cols-[minmax(0,1fr)]" : "lg:grid-cols-[220px_minmax(520px,1fr)_280px]";
+  const isOriginalMode = readingMode === "original";
+  const isStudyMode = readingMode === "study";
+  const showToc = !isFocusMode && !isOriginalMode && !isStudyMode;
+  const showStudyTools = !isFocusMode && (isStudyMode || !isOriginalMode);
+  const currentChapter =
+    [...toc].reverse().find((item) => item.page_number <= activePage)?.title ??
+    null;
+  const gridClass =
+    isOriginalMode || (isFocusMode && !isStudyMode)
+      ? "grid-cols-[minmax(0,1fr)]"
+      : isStudyMode
+        ? "lg:grid-cols-[minmax(520px,1fr)_320px]"
+        : tocCollapsed
+          ? "lg:grid-cols-[52px_minmax(520px,1fr)_320px]"
+          : "lg:grid-cols-[220px_minmax(520px,1fr)_320px]";
+  const toolTabs: Array<[ToolTab, string]> = [
+    ["chat", t("reader", "panels.ask")],
+    ["search", t("reader", "panels.search")],
+    ["annotations", t("reader", "panels.annotations")],
+    ["keywords", t("reader", "panels.terms")],
+  ];
+  if (isResearchDocument) {
+    toolTabs.splice(1, 0, [
+      "references",
+      t("reader", "panels.references"),
+    ]);
+  }
 
   const scrollModeContent = (
     <div
-      aria-label="Virtualized document content"
+      aria-label={t("reader", "virtualContent")}
       className="h-[calc(100vh-12rem)] min-h-[520px] overflow-y-auto overscroll-contain border-x border-[var(--reader-border)] bg-[var(--reader-surface)]"
       ref={scrollParentRef}
       style={{ fontFamily, fontSize: `${preferences.font_size}px`, lineHeight: preferences.line_height }}
@@ -586,42 +898,106 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
 
   return (
     <div className="reader-theme w-full" data-theme={preferences.theme}>
-      <ReaderToolbar activePage={activePage} backHref={`/documents/${document.id}`} pageCount={processing.page_count} progressState={progressState} title={document.title} />
+      <ReaderToolbar
+        activePage={activePage}
+        backHref={`/documents/${document.id}`}
+        chapterTitle={currentChapter}
+        pageCount={processing.page_count}
+        progressState={progressState}
+        readingPage={activeReadingPage}
+        title={document.title}
+      >
+        <div
+          className="relative"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setSettingsOpen(false);
+          }}
+        >
+          <button
+            aria-controls="reader-settings-popover"
+            aria-expanded={settingsOpen}
+            aria-label={t("reader", "panels.settings")}
+            className="hidden size-11 place-items-center rounded-lg border border-[var(--reader-border)] focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)] sm:grid"
+            onClick={() => setSettingsOpen((open) => !open)}
+            title={t("reader", "panels.settings")}
+            type="button"
+          >
+            <Settings2 size={17} />
+          </button>
+          {settingsOpen ? (
+            <div
+              aria-label={t("reader", "panels.settings")}
+              className="absolute right-0 top-12 z-40 w-72 rounded-lg border border-[var(--reader-border)] bg-[var(--reader-surface)] p-4 shadow-xl"
+              id="reader-settings-popover"
+              role="group"
+            >
+              <ReaderSettings
+                onChange={changePreferences}
+                preferences={preferences}
+              />
+            </div>
+          ) : null}
+        </div>
+      </ReaderToolbar>
 
-      <div className="mt-4 flex gap-2 lg:hidden px-4">
-        <MobileToolButton icon={<Menu size={17} />} label="Contents" onClick={() => setMobilePanel("toc")} />
-        <MobileToolButton icon={<MessageSquare size={17} />} label="Ask document" onClick={() => setMobilePanel("chat")} />
-        <MobileToolButton icon={<Search size={17} />} label="Search" onClick={() => setMobilePanel("search")} />
-        <MobileToolButton icon={<Tags size={17} />} label="Technical terms" onClick={() => setMobilePanel("keywords")} />
-        <MobileToolButton icon={<StickyNote size={17} />} label="Annotations" onClick={() => setMobilePanel("annotations")} />
-        <MobileToolButton icon={<Settings2 size={17} />} label="Settings" onClick={() => setMobilePanel("settings")} />
-      </div>
+      {!isFocusMode ? <div className="mt-4 flex gap-2 lg:hidden px-4">
+        <MobileToolButton icon={<Menu size={17} />} label={contentsLabel} onClick={() => setMobilePanel("toc")} />
+        <MobileToolButton icon={<MessageSquare size={17} />} label={t("reader", "panels.ask")} onClick={() => setMobilePanel("chat")} />
+        {isResearchDocument ? <MobileToolButton icon={<LibraryBig size={17} />} label={t("reader", "panels.references")} onClick={() => setMobilePanel("references")} /> : null}
+        <MobileToolButton icon={<Search size={17} />} label={t("reader", "panels.search")} onClick={() => setMobilePanel("search")} />
+        <MobileToolButton icon={<Tags size={17} />} label={t("reader", "panels.terms")} onClick={() => setMobilePanel("keywords")} />
+        <MobileToolButton icon={<StickyNote size={17} />} label={t("reader", "panels.annotations")} onClick={() => setMobilePanel("annotations")} />
+        <MobileToolButton icon={<Settings2 size={17} />} label={t("reader", "panels.settings")} onClick={() => setMobilePanel("settings")} />
+      </div> : null}
 
       <div className={`mt-5 grid items-start gap-7 ${gridClass}`}>
-        {!isFocusMode ? <aside className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto border-r border-[var(--reader-border)] pr-5 lg:block pl-4"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Contents</h2><TableOfContents items={toc} onNavigate={(item) => void navigate(item.block_id)} /></aside> : null}
+        {showToc ? (
+          <aside
+            aria-label={contentsLabel}
+            className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto border-r border-[var(--reader-border)] px-2 lg:block"
+          >
+            <button
+              aria-expanded={!tocCollapsed}
+              aria-label={tocCollapsed ? t("reader", "panels.expandContents") : t("reader", "panels.collapseContents")}
+              className="mb-4 grid size-11 place-items-center rounded-lg border border-[var(--reader-border)] focus-visible:ring-2 focus-visible:ring-[var(--reader-accent)]"
+              onClick={() => setTocCollapsed((value) => !value)}
+              type="button"
+            >
+              {tocCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+            {!tocCollapsed ? <><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">{contentsLabel}</h2><TableOfContents items={toc} label={contentsLabel} onNavigate={(item) => void navigate(item.block_id)} /></> : null}
+          </aside>
+        ) : null}
 
         <main className="min-w-0 h-[calc(100vh-8rem)]">
-          {readingMode === "pdf" ? (
+          {readingMode === "original" ? (
             <div className="h-full w-full border border-[var(--reader-border)] bg-white rounded-md overflow-hidden shadow-sm">
               <iframe
                 src={pdfLink}
                 className="w-full h-full border-none"
-                title="Original PDF"
+                title={t("reader", "toolbar.originalMode")}
               />
             </div>
-          ) : readingMode === "scroll" ? (
+          ) : readingMode === "clean" || readingMode === "study" ? (
             scrollModeContent
           ) : (
             <BookReader
               animationEnabled={immersivePrefs.pageTurnEnabled}
               blocks={visibleBlocks}
               bookmarks={bookmarkedBlocks}
+              contentRevision={
+                document.versions.at(-1)?.content_hash ?? document.updated_at
+              }
+              documentTitle={document.title}
+              documentVersionId={document.versions.at(-1)?.id ?? document.id}
               fontFamily={fontFamily}
               fontSize={preferences.font_size}
               highlightQuery={highlightQuery}
               highlightedBlock={highlightedBlock}
               highlights={highlightsByBlock}
               initialPage={Math.max(0, activePage - 1)}
+              initialBlockId={bookNavigationTarget?.blockId ?? null}
+              key={`book-reader-${bookNavigationTarget?.requestId ?? 0}`}
               keywords={keywordsByBlock}
               keywordsEnabled={keywordPreferences.enabled}
               lineHeight={preferences.line_height}
@@ -630,7 +1006,11 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
               onPageChange={handleBookPageChange}
               onPageTurnSound={() => pageTurnSound.current?.play()}
               onSelection={setSelection}
-              pageColor={room.pageColor}
+              pageColor={
+                preferences.theme === "light"
+                  ? room.pageColor
+                  : "var(--reader-surface)"
+              }
               pageTextureOpacity={room.pageTextureOpacity}
               readingWidth={preferences.reading_width}
               reducedMotion={reducedMotion}
@@ -638,10 +1018,42 @@ export function DocumentReader({ documentId }: DocumentReaderProps) {
           )}
         </main>
 
-        {!isFocusMode ? <aside className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto lg:block pr-4"><div className="border-b border-[var(--reader-border)] pb-6">{chatPanel}</div><div className="border-b border-[var(--reader-border)] py-6"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Search</h2>{searchPanel}</div><div className="border-b border-[var(--reader-border)] py-6">{keywordPanel}</div><div className="pt-6">{annotationPanel}</div><div className="pt-6 pb-8"><h2 className="mb-4 text-xs font-semibold uppercase text-[var(--reader-muted)]">Typography</h2><ReaderSettings onChange={changePreferences} preferences={preferences} /></div></aside> : null}
+        {showStudyTools ? (
+          <aside aria-label={t("reader", "panels.studyTools")} className="sticky top-4 hidden max-h-[calc(100vh-3rem)] overflow-y-auto pr-4 lg:block">
+            <div
+              aria-label={t("reader", "panels.toolTabs")}
+              className="sticky top-0 z-10 grid border border-[var(--reader-border)] bg-[var(--reader-surface)]"
+              role="tablist"
+              style={{ gridTemplateColumns: `repeat(${toolTabs.length}, minmax(0, 1fr))` }}
+            >
+              {toolTabs.map(([tab, label]) => (
+                <button
+                  aria-controls={`reader-tool-${tab}`}
+                  aria-selected={activeToolTab === tab}
+                  className="min-h-11 border-r border-[var(--reader-border)] px-1 text-xs last:border-r-0 aria-selected:bg-[var(--reader-surface-muted)] aria-selected:font-semibold"
+                  id={`reader-tab-${tab}`}
+                  key={tab}
+                  onClick={() => setActiveToolTab(tab)}
+                  role="tab"
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div
+              aria-labelledby={`reader-tab-${activeToolTab}`}
+              className="pt-4"
+              id={`reader-tool-${activeToolTab}`}
+              role="tabpanel"
+            >
+              {activeToolPanel}
+            </div>
+          </aside>
+        ) : null}
       </div>
       {selection ? <SelectionToolbar onCancel={() => setSelection(null)} onCreate={(color) => void addHighlight(color)} selection={selection} /> : null}
-      {mobilePanel ? <MobilePanelDialog onClose={() => setMobilePanel(null)} title={mobilePanel === "toc" ? "Contents" : mobilePanel === "chat" ? "Ask document" : mobilePanel === "search" ? "Search document" : mobilePanel === "keywords" ? "Technical terms" : mobilePanel === "annotations" ? "Annotations" : "Reading settings"}>{mobilePanel === "toc" ? <TableOfContents items={toc} onNavigate={(item) => void navigate(item.block_id)} /> : mobilePanel === "chat" ? chatPanel : mobilePanel === "search" ? searchPanel : mobilePanel === "keywords" ? keywordPanel : mobilePanel === "annotations" ? annotationPanel : <ReaderSettings onChange={changePreferences} preferences={preferences} />}</MobilePanelDialog> : null}
+      {mobilePanel ? <MobilePanelDialog onClose={() => setMobilePanel(null)} title={mobilePanel === "toc" ? contentsLabel : mobilePanel === "chat" ? t("reader", "panels.ask") : mobilePanel === "references" ? t("reader", "panels.references") : mobilePanel === "search" ? t("reader", "panels.searchDocument") : mobilePanel === "keywords" ? t("reader", "panels.terms") : mobilePanel === "annotations" ? t("reader", "panels.annotations") : t("reader", "panels.settings")}>{mobilePanel === "toc" ? <TableOfContents items={toc} label={contentsLabel} onNavigate={(item) => void navigate(item.block_id)} /> : mobilePanel === "chat" ? chatPanel : mobilePanel === "references" ? referencePanel : mobilePanel === "search" ? searchPanel : mobilePanel === "keywords" ? keywordPanel : mobilePanel === "annotations" ? annotationPanel : <ReaderSettings onChange={changePreferences} preferences={preferences} />}</MobilePanelDialog> : null}
     </div>
   );
 }
@@ -651,10 +1063,13 @@ function MobileToolButton({ icon, label, onClick }: { icon: ReactNode; label: st
 }
 
 function MobilePanelDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return <div aria-label="Reader tools" aria-modal="true" className="fixed inset-0 z-40 bg-black/40 lg:hidden" role="dialog"><div className="absolute inset-x-0 bottom-0 max-h-[82vh] overflow-y-auto bg-[var(--reader-surface)] p-5 text-[var(--reader-foreground)]"><div className="mb-5 flex items-center justify-between border-b border-[var(--reader-border)] pb-4"><h2 className="font-semibold">{title}</h2><button aria-label="Close reader tools" className="grid size-9 place-items-center" onClick={onClose} title="Close" type="button"><X size={19} /></button></div>{children}</div></div>;
+  const { t } = useI18n();
+  const dialogRef = useDialogFocusTrap(true, onClose);
+  return <div aria-label={t("reader", "panels.tools")} aria-modal="true" className="fixed inset-0 z-40 bg-black/40 lg:hidden" ref={dialogRef} role="dialog" tabIndex={-1}><div className="absolute inset-x-0 bottom-0 max-h-[82vh] overflow-y-auto bg-[var(--reader-surface)] p-5 text-[var(--reader-foreground)]"><div className="mb-5 flex items-center justify-between border-b border-[var(--reader-border)] pb-4"><h2 className="font-semibold">{title}</h2><button aria-label={t("reader", "panels.closeTools")} className="grid size-11 place-items-center" onClick={onClose} title={t("common", "actions.close")} type="button"><X size={19} /></button></div>{children}</div></div>;
 }
 
 function ReaderState({ title, pdfLink, tone = "notice", children }: { title: string; pdfLink: string; tone?: "notice" | "danger"; children: ReactNode }) {
+  const { t } = useI18n();
   const colors = tone === "danger" ? "border-[var(--danger)] bg-[var(--danger-soft)]" : "border-[var(--notice)] bg-[var(--notice-soft)]";
-  return <div className="w-full"><Link className="text-sm font-semibold text-[var(--accent-strong)]" href="/library">Back to Library</Link><h1 className="mt-4 text-3xl font-semibold">{title}</h1><section className={`mt-8 border-l-4 p-6 ${colors}`} role="status"><p className="leading-7">{children}</p><a className="mt-5 inline-flex border border-[var(--border-strong)] bg-white px-4 py-2 text-sm font-semibold" href={pdfLink} rel="noreferrer" target="_blank">View original PDF</a></section></div>;
+  return <div className="w-full"><Link className="text-sm font-semibold text-[var(--accent-strong)]" href="/library">{t("library", "back")}</Link><h1 className="mt-4 text-3xl font-semibold">{title}</h1><section className={`mt-8 border-l-4 p-6 ${colors}`} role="status"><p className="leading-7">{children}</p><a className="mt-5 inline-flex border border-[var(--border-strong)] bg-white px-4 py-2 text-sm font-semibold" href={pdfLink} rel="noreferrer" target="_blank">{t("reader", "viewOriginal")}</a></section></div>;
 }

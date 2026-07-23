@@ -2,12 +2,15 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
 HighlightStatus = Literal["ACTIVE", "NEEDS_REVIEW", "ORPHANED"]
 ReaderTheme = Literal["light", "dark", "sepia"]
 ReaderFontFamily = Literal["sans", "serif", "dyslexic"]
+ReadingMode = Literal["original", "clean", "book", "study"]
+ReaderLanguage = Literal["vi", "en"]
+KeywordLevel = Literal["BEGINNER", "INTERMEDIATE", "ADVANCED"]
 
 
 class ProgressUpdate(BaseModel):
@@ -16,12 +19,25 @@ class ProgressUpdate(BaseModel):
     page_number: int = Field(ge=1)
     progress_percent: float = Field(ge=0, le=100)
     scroll_offset: float = Field(default=0, ge=0)
-    reading_mode: str = Field(default="standard", min_length=1, max_length=32)
+    reading_mode: ReadingMode = "clean"
+
+    @field_validator("reading_mode", mode="before")
+    @classmethod
+    def normalize_legacy_reading_mode(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        return {
+            "pdf": "original",
+            "scroll": "clean",
+            "standard": "clean",
+            "focus": "clean",
+        }.get(value, value)
 
 
 class ProgressResponse(ProgressUpdate):
     id: UUID
     document_id: UUID
+    reading_seconds: int = 0
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -113,10 +129,23 @@ class ReadingPreferenceUpdate(BaseModel):
     reading_width: int = Field(default=720, ge=520, le=1000)
     font_family: ReaderFontFamily = "sans"
     focus_mode: bool = False
+    reading_mode: ReadingMode = "clean"
+    reading_room: str = Field(default="minimal-focus", min_length=1, max_length=64)
+    page_turn_animation: bool = True
+    page_turn_sound: bool = False
+    ambient_sound: bool = False
+    master_volume: float = Field(default=0.7, ge=0, le=1)
+    ambient_volume: float = Field(default=0.5, ge=0, le=1)
+    page_turn_volume: float = Field(default=0.6, ge=0, le=1)
+    language: ReaderLanguage = "vi"
+    keyword_level: KeywordLevel = "BEGINNER"
+    use_document_type_defaults: bool = False
+    analytics_enabled: bool = False
 
 
 class ReadingPreferenceResponse(ReadingPreferenceUpdate):
     id: UUID | None = None
+    use_document_type_defaults: bool = True
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

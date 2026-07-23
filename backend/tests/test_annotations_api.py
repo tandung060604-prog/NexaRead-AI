@@ -36,7 +36,7 @@ async def test_progress_create_update_and_restore(api_context: ApiTestContext) -
         "page_number": block["page_number"],
         "progress_percent": 40,
         "scroll_offset": 120,
-        "reading_mode": "standard",
+        "reading_mode": "study",
     }
 
     empty = await api_context.client.get(endpoint)
@@ -49,6 +49,35 @@ async def test_progress_create_update_and_restore(api_context: ApiTestContext) -
     assert created.status_code == 200
     assert created.json()["id"] == updated.json()["id"]
     assert restored.json()["progress_percent"] == 75
+    assert restored.json()["reading_mode"] == "study"
+
+
+@pytest.mark.anyio
+async def test_progress_normalizes_legacy_modes_and_rejects_unknown_mode(
+    api_context: ApiTestContext,
+) -> None:
+    document, block = await readable_document(api_context)
+    endpoint = f"/api/documents/{document['id']}/progress"
+    payload = {
+        "document_version_id": version_id(document),
+        "last_block_id": block["id"],
+        "page_number": block["page_number"],
+        "progress_percent": 40,
+        "scroll_offset": 120,
+    }
+
+    legacy = await api_context.client.put(
+        endpoint,
+        json={**payload, "reading_mode": "scroll"},
+    )
+    invalid = await api_context.client.put(
+        endpoint,
+        json={**payload, "reading_mode": "cinema"},
+    )
+
+    assert legacy.status_code == 200
+    assert legacy.json()["reading_mode"] == "clean"
+    assert invalid.status_code == 422
 
 
 @pytest.mark.anyio
@@ -228,14 +257,32 @@ async def test_preferences_persist(api_context: ApiTestContext) -> None:
             "reading_width": 800,
             "font_family": "serif",
             "focus_mode": True,
+            "reading_mode": "study",
+            "reading_room": "rainy-window",
+            "page_turn_animation": False,
+            "page_turn_sound": True,
+            "ambient_sound": True,
+            "master_volume": 0.4,
+            "ambient_volume": 0.3,
+            "page_turn_volume": 0.2,
+            "language": "en",
+            "keyword_level": "ADVANCED",
         },
     )
     restored = await api_context.client.get(endpoint)
 
     assert defaults.json()["theme"] == "light"
+    assert defaults.json()["page_turn_sound"] is False
+    assert defaults.json()["ambient_sound"] is False
     assert saved.status_code == 200
     assert restored.json()["theme"] == "sepia"
     assert restored.json()["focus_mode"] is True
+    assert restored.json()["reading_mode"] == "study"
+    assert restored.json()["reading_room"] == "rainy-window"
+    assert restored.json()["page_turn_sound"] is True
+    assert restored.json()["ambient_sound"] is True
+    assert restored.json()["language"] == "en"
+    assert restored.json()["keyword_level"] == "ADVANCED"
 
 
 @pytest.mark.anyio

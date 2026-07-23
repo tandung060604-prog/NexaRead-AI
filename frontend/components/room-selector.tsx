@@ -2,7 +2,9 @@
 
 import { Shuffle, Star, X } from "lucide-react";
 
+import { useI18n } from "@/components/i18n-provider";
 import type { ReadingRoom } from "@/config/reading-rooms";
+import { useDialogFocusTrap } from "@/lib/dialog-focus";
 
 import { useReadingRoom } from "./reading-room-provider";
 
@@ -23,6 +25,7 @@ function RoomCard({
   onSelect: () => void;
   onToggleFavorite: () => void;
 }) {
+  const { t } = useI18n();
   // Background class for preview
   const bgClasses: Record<string, string> = {
     "cozy-library": "room-bg-cozy-library",
@@ -35,6 +38,7 @@ function RoomCard({
 
   const bgClass = bgClasses[room.backgroundSource] ?? "";
   const isMinimal = room.id === "minimal-focus";
+  const roomName = t("reader", `room.presets.${room.id}.name`);
 
   return (
     <div
@@ -61,15 +65,19 @@ function RoomCard({
 
         {/* Selected indicator */}
         {isSelected && (
-          <div className="absolute right-2 top-2 rounded-full bg-[var(--room-accent,var(--reader-accent))] px-2 py-0.5 text-[10px] font-bold text-white">
-            Active
+          <div className="absolute right-2 top-2 rounded-full bg-[var(--room-accent,var(--reader-accent))] px-2 py-0.5 text-[10px] font-bold text-[var(--room-accent-foreground,var(--reader-accent-foreground))]">
+            {t("reader", "room.active")}
           </div>
         )}
 
         {/* Favorite star */}
         <button
-          aria-label={isFavorite ? `Unpin ${room.name}` : `Pin ${room.name}`}
-          className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-black/30 text-white opacity-0 transition-opacity group-hover:opacity-100"
+          aria-label={
+            isFavorite
+              ? t("reader", "room.unpin", { name: roomName })
+              : t("reader", "room.pin", { name: roomName })
+          }
+          className="absolute left-2 top-2 grid size-7 place-items-center rounded-full bg-black/30 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           onClick={(event) => {
             event.stopPropagation();
             onToggleFavorite();
@@ -82,35 +90,38 @@ function RoomCard({
         {/* Sound indicator */}
         {room.audioLayers.length > 0 && (
           <div className="absolute bottom-2 right-2 text-xs text-white/80">
-            🔊 {room.audioLayers.map((l) => l.label).join(", ")}
+            🔊{" "}
+            {room.audioLayers
+              .map((layer) => t("reader", `room.audioLayers.${layer.id}`))
+              .join(", ")}
           </div>
         )}
 
         {/* Motion indicator */}
         {room.motionIntensity !== "none" && (
           <div className="absolute bottom-2 left-2 text-xs text-white/70">
-            ◐ {room.motionIntensity}
+            ◐ {t("reader", `room.motion.${room.motionIntensity}`)}
           </div>
         )}
       </div>
 
       {/* Card info */}
       <div className="p-3">
-        <h3 className="font-semibold text-sm">{room.name}</h3>
+        <h3 className="font-semibold text-sm">{roomName}</h3>
         <p className="mt-1 text-xs text-[var(--reader-muted)] line-clamp-2">
-          {room.description}
+          {t("reader", `room.presets.${room.id}.description`)}
         </p>
 
         <button
           className={`mt-3 w-full rounded-lg py-2 text-xs font-semibold transition-colors ${
             isSelected
               ? "bg-[var(--reader-surface-muted)] text-[var(--reader-muted)]"
-              : "bg-[var(--room-accent,var(--reader-accent))] text-white hover:opacity-90"
+              : "bg-[var(--room-accent,var(--reader-accent))] text-[var(--room-accent-foreground,var(--reader-accent-foreground))] hover:opacity-90"
           }`}
           onClick={onSelect}
           type="button"
         >
-          {isSelected ? "Current Room" : "Enter Room"}
+          {isSelected ? t("reader", "room.current") : t("reader", "room.enter")}
         </button>
       </div>
     </div>
@@ -122,6 +133,7 @@ function RoomCard({
 // ---------------------------------------------------------------------------
 
 export function RoomSelector() {
+  const { t } = useI18n();
   const {
     room: currentRoom,
     rooms,
@@ -131,6 +143,14 @@ export function RoomSelector() {
     roomSelectorOpen,
     setRoomSelectorOpen,
   } = useReadingRoom();
+  function dismissSelector() {
+    updatePreferences({ selectedRoom: currentRoom.id });
+    setRoomSelectorOpen(false);
+  }
+  const dialogRef = useDialogFocusTrap(
+    roomSelectorOpen,
+    dismissSelector,
+  );
 
   if (!roomSelectorOpen) return null;
 
@@ -157,24 +177,26 @@ export function RoomSelector() {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
-      aria-label="Choose your reading space"
+      aria-label={t("reader", "room.dialog")}
       aria-modal="true"
+      ref={dialogRef}
+      tabIndex={-1}
     >
       <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[var(--reader-surface)] p-6 shadow-2xl sm:p-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold sm:text-2xl">
-              Choose Your Reading Space
+              {t("reader", "room.title")}
             </h2>
             <p className="mt-1 text-sm text-[var(--reader-muted)]">
-              Select an atmosphere that matches your mood
+              {t("reader", "room.description")}
             </p>
           </div>
           <button
-            aria-label="Close room selector"
+            aria-label={t("reader", "room.close")}
             className="grid size-10 place-items-center rounded-lg border border-[var(--reader-border)] transition-colors hover:bg-[var(--reader-surface-muted)]"
-            onClick={() => setRoomSelectorOpen(false)}
+            onClick={dismissSelector}
             type="button"
           >
             <X size={20} />
@@ -203,14 +225,14 @@ export function RoomSelector() {
             type="button"
           >
             <Shuffle size={16} />
-            Random Room
+            {t("reader", "room.random")}
           </button>
           <button
             className="rounded-lg px-4 py-2 text-sm font-semibold text-[var(--reader-muted)] transition-colors hover:text-[var(--reader-foreground)]"
-            onClick={() => setRoomSelectorOpen(false)}
+            onClick={dismissSelector}
             type="button"
           >
-            Skip →
+            {t("reader", "room.skip")} →
           </button>
         </div>
       </div>

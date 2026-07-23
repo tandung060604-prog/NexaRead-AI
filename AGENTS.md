@@ -10,6 +10,16 @@ This file defines the rules Codex must follow when working in this repository.
   - `docs/architecture.md`
 - Use those documents as the source of truth for product scope, MVP behavior, and system design.
 
+## Repository Skills
+
+- Before changing document parsers, processing, normalization, language or
+  document-type detection, reading order, semantic layout metadata, layout
+  persistence, reprocessing, or any behavior that can affect source text or
+  citation anchors, read:
+  - `skills/document-layout-intelligence/SKILL.md`
+- Follow its source/display separation, deterministic fallback, evaluation,
+  security, and handoff requirements.
+
 ## Scope Control
 
 - Implement only the milestone or task explicitly assigned.

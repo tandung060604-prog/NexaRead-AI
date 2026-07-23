@@ -13,7 +13,7 @@ const NAMESPACE = "nexaread:immersive";
 // Types
 // ---------------------------------------------------------------------------
 
-export type ReadingMode = "scroll" | "book" | "pdf";
+export type ReadingMode = "original" | "clean" | "book" | "study";
 
 export type ImmersivePreferences = {
   /** Currently selected reading room ID. */
@@ -51,10 +51,10 @@ export type ImmersivePreferences = {
 const DEFAULT_PREFERENCES: ImmersivePreferences = {
   selectedRoom: "minimal-focus",
   favoriteRooms: [],
-  readingMode: "scroll",
+  readingMode: "clean",
   pageTurnEnabled: true,
-  pageTurnSoundEnabled: true,
-  ambientEnabled: true,
+  pageTurnSoundEnabled: false,
+  ambientEnabled: false,
   masterVolume: 0.7,
   ambientVolume: 0.5,
   pageTurnVolume: 0.6,
@@ -65,6 +65,14 @@ const DEFAULT_PREFERENCES: ImmersivePreferences = {
   layerVolumes: {},
   autoRoomByTime: false,
 };
+
+export function getDefaultImmersivePreferences(): ImmersivePreferences {
+  return {
+    ...DEFAULT_PREFERENCES,
+    favoriteRooms: [...DEFAULT_PREFERENCES.favoriteRooms],
+    layerVolumes: { ...DEFAULT_PREFERENCES.layerVolumes },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Storage helpers
@@ -99,7 +107,25 @@ function writeJSON(key: string, value: unknown): void {
  */
 export function loadImmersivePreferences(): ImmersivePreferences {
   const saved = readJSON<Partial<ImmersivePreferences>>("preferences", {});
-  return { ...DEFAULT_PREFERENCES, ...saved };
+  return {
+    ...getDefaultImmersivePreferences(),
+    ...saved,
+    readingMode: normalizeReadingMode(saved.readingMode),
+  };
+}
+
+export function hasPersistedImmersivePreferences(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(`${NAMESPACE}:preferences`) !== null
+  );
+}
+
+/** Normalize persisted values from the pre-upgrade scroll/pdf mode names. */
+export function normalizeReadingMode(value: unknown): ReadingMode {
+  if (value === "original" || value === "book" || value === "study") return value;
+  if (value === "pdf") return "original";
+  return "clean";
 }
 
 /** Persist a partial update, merging with existing preferences. */
@@ -114,8 +140,9 @@ export function saveImmersivePreferences(
 
 /** Reset all immersive preferences to defaults. */
 export function resetImmersivePreferences(): ImmersivePreferences {
-  writeJSON("preferences", DEFAULT_PREFERENCES);
-  return { ...DEFAULT_PREFERENCES };
+  const defaults = getDefaultImmersivePreferences();
+  writeJSON("preferences", defaults);
+  return defaults;
 }
 
 /** Get a single preference value. */

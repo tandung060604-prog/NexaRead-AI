@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { translate } from "@/lib/i18n";
+
 import { DocumentChat } from "./document-chat";
 
 afterEach(() => {
@@ -39,13 +41,19 @@ describe("DocumentChat", () => {
     }));
     render(<DocumentChat documentId="document-1" onCitation={onCitation} />);
 
-    fireEvent.change(screen.getByLabelText("Ask a question about this document"), {
+    fireEvent.change(screen.getByLabelText(
+      translate("vi", "chat", "questionLabel"),
+    ), {
       target: { value: "How does retrieval work?" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "chat", "send"),
+    }));
 
     expect(await screen.findByText("Grounded answer. [S1]")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "S1 · p.3" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: `S1 · ${translate("vi", "chat", "sourcePage", { page: 3 })}`,
+    }));
     expect(onCitation).toHaveBeenCalledWith("block-42");
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   });
@@ -57,12 +65,18 @@ describe("DocumentChat", () => {
     }));
     render(<DocumentChat documentId="document-1" onCitation={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("Ask a question about this document"), {
+    fireEvent.change(screen.getByLabelText(
+      translate("vi", "chat", "questionLabel"),
+    ), {
       target: { value: "What is this?" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Ask" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "chat", "send"),
+    }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Document is not AI ready");
-    expect(screen.queryByLabelText("Answer sources")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(translate("vi", "chat", "sources")),
+    ).not.toBeInTheDocument();
   });
 });

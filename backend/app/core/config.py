@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     frontend_url: str = "http://localhost:3000"
-    default_owner_id: str = "local-user"
+    auth_session_hours: int = Field(default=168, ge=1, le=24 * 365)
+    auth_rate_limit_per_minute: int = Field(default=10, ge=0, le=1000)
+    auth_cookie_name: str = "nexaread_session"
+    auth_csrf_cookie_name: str = "nexaread_csrf"
+    auth_ip_hash_key: SecretStr = SecretStr("")
     database_url: str = "postgresql+asyncpg://nexaread:nexaread-dev@localhost:5432/nexaread"
     redis_url: str = "redis://localhost:6379/0"
     s3_endpoint: str = "http://localhost:9000"
@@ -26,6 +30,12 @@ class Settings(BaseSettings):
     url_import_max_redirects: int = Field(default=3, ge=0, le=5)
     parser_timeout_seconds: float = Field(default=60.0, ge=5.0, le=300.0)
     min_extracted_text_characters: int = Field(default=20, ge=1, le=10000)
+    layout_ai_repair_enabled: bool = False
+    layout_ai_repair_confidence_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+    )
     rag_provider: Literal["local", "openai"] = "local"
     openai_api_key: str | None = None
     openai_base_url: str | None = None
@@ -47,6 +57,25 @@ class Settings(BaseSettings):
     @property
     def url_import_max_bytes(self) -> int:
         return self.url_import_max_mb * 1024 * 1024
+
+    @property
+    def auth_cookie_secure(self) -> bool:
+        return self.app_env.lower() == "production"
+
+    @model_validator(mode="after")
+    def validate_production_auth(self) -> "Settings":
+        if self.app_env.lower() == "production":
+            if len(self.auth_ip_hash_key.get_secret_value()) < 32:
+                raise ValueError(
+                    "AUTH_IP_HASH_KEY must contain at least 32 characters in production"
+                )
+            if not self.frontend_url.startswith("https://"):
+                raise ValueError("FRONTEND_URL must use HTTPS in production")
+            if self.auth_rate_limit_per_minute == 0:
+                raise ValueError(
+                    "AUTH_RATE_LIMIT_PER_MINUTE must be enabled in production"
+                )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=("../.env", ".env"),

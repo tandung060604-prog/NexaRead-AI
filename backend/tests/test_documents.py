@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import httpx
 import pytest
 
@@ -31,14 +33,57 @@ async def test_upload_valid_pdf(api_context: ApiTestContext) -> None:
     assert body["original_filename"] == "Quarterly Report.pdf"
     assert body["mime_type"] == "application/pdf"
     assert body["file_size"] == len(PDF_BYTES)
-    assert body["status"] == "QUEUED"
+    assert body["status"] == "SAFETY_CHECK"
     assert body["versions"][0]["version_number"] == 1
-    assert body["processing_jobs"][0]["status"] == "QUEUED"
+    assert body["processing_jobs"][0]["status"] == "SAFETY_CHECK"
+    assert body["processing_jobs"][0]["progress"] == 10
+    assert body["processing_result"] is None
     assert len(api_context.queue.messages) == 1
     storage_key = next(iter(api_context.storage.objects))
     assert storage_key.startswith(f"documents/{body['id']}/versions/")
     assert storage_key.endswith("/original.pdf")
     assert "Quarterly Report.pdf" not in storage_key
+
+
+@pytest.mark.anyio
+async def test_upload_applies_document_type_and_owned_collection(
+    api_context: ApiTestContext,
+) -> None:
+    collection = await api_context.client.post(
+        "/api/collections",
+        json={"name": "Research papers"},
+    )
+
+    response = await api_context.client.post(
+        "/api/documents/upload",
+        data={
+            "document_type_override": "research_paper",
+            "collection_id": collection.json()["id"],
+        },
+        files={"file": ("paper.pdf", PDF_BYTES, "application/pdf")},
+    )
+
+    assert collection.status_code == 201
+    assert response.status_code == 201
+    assert response.json()["collection_id"] == collection.json()["id"]
+    assert response.json()["document_type_override"] == "RESEARCH_PAPER"
+    assert response.json()["layout_type"] == "PAPER"
+
+
+@pytest.mark.anyio
+async def test_upload_rejects_unowned_or_unknown_collection_before_storage(
+    api_context: ApiTestContext,
+) -> None:
+    response = await api_context.client.post(
+        "/api/documents/upload",
+        data={"collection_id": str(uuid4())},
+        files={"file": ("paper.pdf", PDF_BYTES, "application/pdf")},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Collection not found"
+    assert api_context.storage.objects == {}
+    assert api_context.queue.messages == []
 
 
 @pytest.mark.anyio

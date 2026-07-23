@@ -1,6 +1,9 @@
 import httpx
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 
+from app.db.session import DATABASE_SCHEMA_REVISION
 from app.main import app
 
 
@@ -44,3 +47,9 @@ async def test_readiness_reports_dependency_failure(monkeypatch: pytest.MonkeyPa
     assert response.status_code == 503
     assert response.json()["status"] == "unhealthy"
     assert response.json()["checks"]["redis_queue"] == "unhealthy"
+
+
+def test_readiness_revision_matches_alembic_head() -> None:
+    scripts = ScriptDirectory.from_config(Config("alembic.ini"))
+
+    assert scripts.get_current_head() == DATABASE_SCHEMA_REVISION

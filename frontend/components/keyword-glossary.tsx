@@ -3,6 +3,7 @@
 import { BookOpen, Check, ChevronRight, CircleHelp, Tags } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useI18n } from "@/components/i18n-provider";
 import {
   KeywordDetail,
   KeywordFeedbackType,
@@ -51,6 +52,7 @@ export function KeywordGlossary({
   onPreferences,
   onFeedback,
 }: KeywordGlossaryProps) {
+  const { t } = useI18n();
   const [feedbackState, setFeedbackState] = useState<
     "idle" | "saving" | "saved" | "failed"
   >("idle");
@@ -79,12 +81,12 @@ export function KeywordGlossary({
   }
 
   return (
-    <section aria-label="Technical glossary">
+    <section aria-label={t("reader", "glossary.label")}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Tags aria-hidden="true" size={16} />
           <h2 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">
-            Technical terms
+            {t("reader", "glossary.title")}
           </h2>
         </div>
         <label className="flex items-center gap-2 text-xs font-semibold">
@@ -95,12 +97,14 @@ export function KeywordGlossary({
             }
             type="checkbox"
           />
-          Show
+          {t("reader", "glossary.show")}
         </label>
       </div>
 
-      <div className="mt-4" role="group" aria-label="Explanation level">
-        <span className="mb-2 block text-xs text-[var(--reader-muted)]">Reader level</span>
+      <div className="mt-4" role="group" aria-label={t("reader", "glossary.level")}>
+        <span className="mb-2 block text-xs text-[var(--reader-muted)]">
+          {t("reader", "glossary.readerLevel")}
+        </span>
         <div className="grid grid-cols-3 border border-[var(--reader-border)]">
           {LEVELS.map((level) => (
             <button
@@ -114,14 +118,14 @@ export function KeywordGlossary({
               onClick={() => onPreferences(preferenceInput(preferences, { user_level: level }))}
               type="button"
             >
-              {level.slice(0, 3)}
+              {t("reader", `glossary.levels.${level}`)}
             </button>
           ))}
         </div>
       </div>
 
       <label className="mt-4 block text-xs text-[var(--reader-muted)]">
-        Category
+        {t("reader", "glossary.category")}
         <select
           className="mt-2 h-10 w-full border border-[var(--reader-border)] bg-[var(--reader-surface)] px-2 text-sm text-[var(--reader-foreground)]"
           onChange={(event) =>
@@ -136,10 +140,10 @@ export function KeywordGlossary({
           }
           value={allCategoriesSelected ? "ALL" : preferences.enabled_categories[0] ?? "ALL"}
         >
-          <option value="ALL">All categories</option>
+          <option value="ALL">{t("reader", "glossary.allCategories")}</option>
           {preferences.available_categories.map((category) => (
             <option key={category} value={category}>
-              {category.replaceAll("_", " ")}
+              {t("reader", `glossary.categories.${category}`)}
             </option>
           ))}
         </select>
@@ -150,11 +154,18 @@ export function KeywordGlossary({
           {error}
         </p>
       ) : loading ? (
-        <div aria-label="Loading technical terms" className="mt-5 h-24 animate-pulse bg-[var(--reader-surface-muted)]" />
+        <div
+          aria-label={t("reader", "glossary.loading")}
+          className="mt-5 h-24 animate-pulse bg-[var(--reader-surface-muted)]"
+        />
       ) : !preferences.enabled ? (
-        <p className="mt-5 text-sm leading-6 text-[var(--reader-muted)]">Technical term highlights are hidden.</p>
+        <p className="mt-5 text-sm leading-6 text-[var(--reader-muted)]">
+          {t("reader", "glossary.hidden")}
+        </p>
       ) : unique.length === 0 ? (
-        <p className="mt-5 text-sm leading-6 text-[var(--reader-muted)]">No technical terms match these settings.</p>
+        <p className="mt-5 text-sm leading-6 text-[var(--reader-muted)]">
+          {t("reader", "glossary.empty")}
+        </p>
       ) : (
         <ol className="mt-5 divide-y divide-[var(--reader-border)] border-y border-[var(--reader-border)]">
           {unique.map((occurrence) => (
@@ -167,7 +178,10 @@ export function KeywordGlossary({
                 <span className="min-w-0 flex-1">
                   <strong className="block truncate text-sm">{occurrence.keyword.canonical_name}</strong>
                   <span className="mt-1 block text-xs text-[var(--reader-muted)]">
-                    {occurrence.keyword.category.replaceAll("_", " ")}
+                    {t(
+                      "reader",
+                      `glossary.categories.${occurrence.keyword.category}`,
+                    )}
                   </span>
                 </span>
                 <ChevronRight aria-hidden="true" size={15} />
@@ -185,14 +199,19 @@ export function KeywordGlossary({
               <h3 className="font-semibold">{detail.canonical_name}</h3>
               <p className="mt-2 text-sm leading-6">{detail.explanation}</p>
               <p className="mt-2 text-xs text-[var(--reader-muted)]">
-                {detail.difficulty} · confidence {Math.round(selected.confidence * 100)}%
+                {t("reader", `glossary.levels.${detail.difficulty}`)} ·{" "}
+                {t("reader", "glossary.confidence", {
+                  value: Math.round(selected.confidence * 100),
+                })}
               </p>
             </div>
           </div>
 
           {detail.related_keywords.length > 0 ? (
             <div className="mt-5">
-              <h4 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">Related</h4>
+              <h4 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">
+                {t("reader", "glossary.related")}
+              </h4>
               <p className="mt-2 text-sm">
                 {detail.related_keywords.map((item) => item.canonical_name).join(", ")}
               </p>
@@ -201,7 +220,7 @@ export function KeywordGlossary({
 
           <div className="mt-5">
             <h4 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">
-              Other occurrences
+              {t("reader", "glossary.otherOccurrences")}
             </h4>
             <div className="mt-2 flex flex-wrap gap-2">
               {selectedOccurrences.map((item, index) => (
@@ -211,7 +230,7 @@ export function KeywordGlossary({
                   onClick={() => onNavigate(item)}
                   type="button"
                 >
-                  {index + 1} · p.{item.page_number}
+                  {index + 1} · {t("reader", "sourcePage")} {item.page_number}
                 </button>
               ))}
             </div>
@@ -219,7 +238,8 @@ export function KeywordGlossary({
 
           <div className="mt-5 border-t border-[var(--reader-border)] pt-4">
             <p className="flex items-center gap-2 text-xs font-semibold">
-              <CircleHelp aria-hidden="true" size={15} /> Was this technical term useful?
+              <CircleHelp aria-hidden="true" size={15} />{" "}
+              {t("reader", "glossary.useful")}
             </p>
             <div className="mt-3 flex gap-2">
               <button
@@ -228,7 +248,7 @@ export function KeywordGlossary({
                 onClick={() => void sendFeedback("HELPFUL")}
                 type="button"
               >
-                <Check size={13} /> Helpful
+                <Check size={13} /> {t("reader", "glossary.helpful")}
               </button>
               <button
                 className="border border-[var(--reader-border)] px-2 py-1 text-xs"
@@ -236,16 +256,16 @@ export function KeywordGlossary({
                 onClick={() => void sendFeedback("NOT_TECHNICAL")}
                 type="button"
               >
-                Not technical
+                {t("reader", "glossary.notTechnical")}
               </button>
             </div>
             <span aria-live="polite" className="mt-2 block text-xs text-[var(--reader-muted)]">
               {feedbackState === "saving"
-                ? "Saving feedback"
+                ? t("reader", "glossary.savingFeedback")
                 : feedbackState === "saved"
-                  ? "Feedback saved"
+                  ? t("reader", "glossary.feedbackSaved")
                   : feedbackState === "failed"
-                    ? "Feedback could not be saved"
+                    ? t("reader", "glossary.feedbackFailed")
                     : ""}
             </span>
           </div>

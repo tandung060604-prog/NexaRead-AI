@@ -1,0 +1,76 @@
+{
+  "onboarding": {
+    "eyebrow": "Personal setup",
+    "title": "What do you usually read for?",
+    "description": "Three short steps help NexaRead suggest a suitable reading space. You can change these settings later.",
+    "loading": "Loading preferences",
+    "progress": "Step {current} of {total}",
+    "skip": "Skip setup",
+    "skipping": "Skipping…",
+    "back": "Back",
+    "next": "Continue",
+    "complete": "Finish",
+    "saving": "Saving…",
+    "error": "Could not save your preferences. Please try again.",
+    "steps": {
+      "typesTitle": "What kinds of documents do you usually read?",
+      "typesDescription": "Select all that apply.",
+      "goalTitle": "What is your main reading goal?",
+      "goalDescription": "This helps prioritize the right tools.",
+      "displayTitle": "How do you prefer content to look?",
+      "displayDescription": "Automatic mode adapts to each document type."
+    },
+    "types": {
+      "STUDY": "Study",
+      "RESEARCH": "Research",
+      "WORK": "Work",
+      "BOOKS": "Books",
+      "TECHNICAL": "Technical documents"
+    },
+    "goals": {
+      "UNDERSTAND": "Understand deeply",
+      "REMEMBER": "Remember knowledge",
+      "REFERENCE": "Look things up quickly",
+      "COMPLETE": "Finish the document"
+    },
+    "displays": {
+      "AUTO": {
+        "title": "Automatic by document",
+        "description": "Books, research papers, and technical documents get tailored layouts."
+      },
+      "BOOK": {
+        "title": "Book mode",
+        "description": "Spacious pages, a serif typeface, and a gentle paper tone."
+      },
+      "CLEAN": {
+        "title": "Clean and focused",
+        "description": "A clear single column with minimal distractions."
+      },
+      "STUDY": {
+        "title": "Study mode",
+        "description": "Prioritizes notes, search, and source citations."
+      }
+    },
+    "analytics": {
+      "title": "Minimal reading statistics",
+      "description": "Optional. Stores only daily time totals, progress, and reading streaks—not detailed behavior streams."
+    }
+  },
+  "analytics": {
+    "title": "Your reading rhythm",
+    "description": "Aggregate statistics help you reflect on progress without adding pressure.",
+    "enable": "Enable reading statistics",
+    "disable": "Disable and delete statistics",
+    "updating": "Updating…",
+    "disabled": "Statistics are off. NexaRead does not store daily reading-time totals.",
+    "privacy": "Only daily aggregates are stored. You can disable and delete them at any time.",
+    "error": "Could not update statistics.",
+    "time": "Reading time",
+    "streak": "Reading streak",
+    "pages": "Source pages reached",
+    "completed": "Documents completed",
+    "days": "{count} days",
+    "hoursMinutes": "{hours} hr {minutes} min",
+    "minutes": "{minutes} min"
+  }
+}

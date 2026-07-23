@@ -119,7 +119,12 @@ export function AmbientAudioProvider({
   // Handle room changes — crossfade audio layers
   useEffect(() => {
     const engine = engineRef.current;
-    if (!engine || !ambientEnabled) return;
+    if (!engine) return;
+    if (!ambientEnabled) {
+      previousRoomRef.current = "";
+      void engine.crossfadeOut();
+      return;
+    }
 
     if (previousRoomRef.current !== room.id) {
       // Crossfade out old layers, then set new ones

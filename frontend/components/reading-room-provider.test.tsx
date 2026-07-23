@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("ReadingRoomProvider", () => {
-  it("initializes motion and first-visit selector without effect-driven state", () => {
+  it("initializes motion and first-visit selector from hydration-safe snapshots", () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn().mockReturnValue({

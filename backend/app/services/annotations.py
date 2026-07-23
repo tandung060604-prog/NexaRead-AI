@@ -1,6 +1,7 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -8,6 +9,7 @@ from app.models.annotation import (
     Bookmark,
     Highlight,
     Note,
+    ReadingDailySummary,
     ReadingProgress,
     UserReadingPreference,
 )
@@ -115,6 +117,8 @@ async def upsert_progress(
             ReadingProgress.document_id == document_id,
         )
     )
+    now = datetime.now(UTC)
+    previous_updated_at = progress.updated_at if progress is not None else None
     if progress is None:
         progress = ReadingProgress(
             user_id=user_id,
@@ -123,12 +127,47 @@ async def upsert_progress(
         )
         session.add(progress)
 
+    preferences = await get_preferences(session, user_id)
+    if (
+        preferences is not None
+        and preferences.analytics_enabled
+        and previous_updated_at is not None
+    ):
+        normalized_previous = (
+            previous_updated_at.replace(tzinfo=UTC)
+            if previous_updated_at.tzinfo is None
+            else previous_updated_at.astimezone(UTC)
+        )
+        elapsed_seconds = min(
+            300,
+            max(0, int((now - normalized_previous).total_seconds())),
+        )
+        if elapsed_seconds >= 5:
+            progress.reading_seconds += elapsed_seconds
+            activity_date = now.date()
+            daily_summary = await session.scalar(
+                select(ReadingDailySummary).where(
+                    ReadingDailySummary.user_id == user_id,
+                    ReadingDailySummary.activity_date == activity_date,
+                )
+            )
+            if daily_summary is None:
+                daily_summary = ReadingDailySummary(
+                    user_id=user_id,
+                    activity_date=activity_date,
+                    reading_seconds=elapsed_seconds,
+                )
+                session.add(daily_summary)
+            else:
+                daily_summary.reading_seconds += elapsed_seconds
+
     progress.document_version_id = payload.document_version_id
     progress.last_block_id = payload.last_block_id
     progress.page_number = payload.page_number
     progress.progress_percent = payload.progress_percent
     progress.scroll_offset = payload.scroll_offset
     progress.reading_mode = payload.reading_mode
+    progress.updated_at = now
     await session.commit()
     await session.refresh(progress)
     return progress
@@ -328,12 +367,34 @@ async def upsert_preferences(
     if preferences is None:
         preferences = UserReadingPreference(user_id=user_id)
         session.add(preferences)
+    was_analytics_enabled = preferences.analytics_enabled
     preferences.theme = payload.theme
     preferences.font_size = payload.font_size
     preferences.line_height = payload.line_height
     preferences.reading_width = payload.reading_width
     preferences.font_family = payload.font_family
     preferences.focus_mode = payload.focus_mode
+    preferences.reading_mode = payload.reading_mode
+    preferences.reading_room = payload.reading_room
+    preferences.page_turn_animation = payload.page_turn_animation
+    preferences.page_turn_sound = payload.page_turn_sound
+    preferences.ambient_sound = payload.ambient_sound
+    preferences.master_volume = payload.master_volume
+    preferences.ambient_volume = payload.ambient_volume
+    preferences.page_turn_volume = payload.page_turn_volume
+    preferences.language = payload.language
+    preferences.keyword_level = payload.keyword_level
+    preferences.use_document_type_defaults = payload.use_document_type_defaults
+    preferences.analytics_enabled = payload.analytics_enabled
+    if was_analytics_enabled and not payload.analytics_enabled:
+        await session.execute(
+            delete(ReadingDailySummary).where(ReadingDailySummary.user_id == user_id)
+        )
+        await session.execute(
+            update(ReadingProgress)
+            .where(ReadingProgress.user_id == user_id)
+            .values(reading_seconds=0)
+        )
     await session.commit()
     await session.refresh(preferences)
     return preferences

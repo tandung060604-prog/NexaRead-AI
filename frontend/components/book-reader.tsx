@@ -1,31 +1,36 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 import type { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
+import {
+  BlockMeasurementMap,
+  createPaginationCacheKey,
+  getCachedPageMap,
+  paginateMeasuredBlocks,
+  setCachedPageMap,
+} from "@/lib/measured-pagination";
+import type {
+  MeasuredPage,
+  PaginatedBlock,
+} from "@/lib/measured-pagination";
 import type { BlockSelection } from "./reader-block";
 
 import { PageSpread } from "./page-spread";
 import { PageTurnController } from "./page-turn-controller";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { PaginationMeasurer } from "./pagination-measurer";
 
 type BookReaderProps = {
-  /** All visible (non-suppressed) blocks, in reading order. */
   blocks: ContentBlock[];
-  /** Room page color. */
+  documentTitle: string;
+  documentVersionId: string;
+  contentRevision: string;
   pageColor: string;
-  /** Room page texture opacity. */
   pageTextureOpacity: number;
-  /** Typography styles. */
   fontFamily: string;
   fontSize: number;
   lineHeight: number;
   readingWidth: number;
-  /** Reader state props forwarded to ReaderBlock. */
   highlights: Map<string, Highlight[]>;
   keywords: Map<string, KeywordOccurrence[]>;
   bookmarks: Map<string, boolean>;
@@ -35,95 +40,138 @@ type BookReaderProps = {
   onBookmark: (block: ContentBlock) => void;
   onSelection: (selection: BlockSelection) => void;
   onKeywordSelect: (occurrence: KeywordOccurrence) => void;
-  /** Page-turn animation enabled. */
   animationEnabled: boolean;
-  /** User prefers reduced motion. */
   reducedMotion: boolean;
-  /** Callback when page changes — for progress tracking. */
-  onPageChange: (pageNumber: number, blockId: string) => void;
-  /** Initial page to restore (0-based index). */
+  onPageChange: (
+    sourcePageNumber: number,
+    blockId: string,
+    readingPageNumber: number,
+  ) => void;
   initialPage: number;
-  /** Callback to play page turn sound. */
+  initialBlockId: string | null;
   onPageTurnSound: () => void;
 };
 
-// ---------------------------------------------------------------------------
-// Pagination helpers
-// ---------------------------------------------------------------------------
+type ViewportSize = {
+  width: number;
+  height: number;
+};
 
-function estimateBlockHeight(block: ContentBlock): number {
-  if (block.block_type === "IMAGE") return 400;
-  if (block.block_type === "TABLE" || block.block_type === "CODE") return 200;
-  if (block.block_type.startsWith("HEADING")) return 80;
-  // Paragraphs / list items: estimate by text length (roughly 70 chars per line, 28px per line + 16px margin)
-  const lines = Math.max(1, Math.ceil((block.text?.length || 0) / 70));
-  return lines * 28 + 16;
+export type DisplayPage = {
+  kind: "cover" | "title" | "content" | "blank";
+  items: PaginatedBlock[];
+  contentPageNumber: number | null;
+  chapterTitle: string | null;
+};
+
+export function buildBookDisplayPages(
+  contentPages: MeasuredPage[],
+): DisplayPage[] {
+  const result: DisplayPage[] = [
+    {
+      kind: "cover",
+      items: [],
+      contentPageNumber: null,
+      chapterTitle: null,
+    },
+    {
+      kind: "title",
+      items: [],
+      contentPageNumber: null,
+      chapterTitle: null,
+    },
+  ];
+  let currentChapter: string | null = null;
+  contentPages.forEach((page, pageIndex) => {
+    const opening = page.items[0]?.block;
+    const beginsChapter = Boolean(
+      opening?.is_chapter_opening || opening?.block_type === "HEADING_1",
+    );
+    if (beginsChapter && result.length % 2 === 0) {
+      result.push({
+        kind: "blank",
+        items: [],
+        contentPageNumber: null,
+        chapterTitle: currentChapter,
+      });
+    }
+    const openingTitle = beginsChapter
+      ? opening?.display_text || opening?.text || null
+      : null;
+    if (openingTitle) currentChapter = openingTitle;
+    result.push({
+      kind: "content",
+      items: page.items,
+      contentPageNumber: pageIndex + 1,
+      chapterTitle: currentChapter,
+    });
+    const lastChapterHeading = [...page.items]
+      .reverse()
+      .find(
+        (item) =>
+          item.block.block_type === "HEADING_1" ||
+          item.block.heading_level === 1,
+      );
+    if (lastChapterHeading) {
+      currentChapter =
+        lastChapterHeading.block.display_text ||
+        lastChapterHeading.block.text;
+    }
+  });
+  return result;
 }
 
-const PAGE_MAX_HEIGHT = 650; // Approximated pixels for a page
-
-function paginateBlocks(blocks: ContentBlock[]): ContentBlock[][] {
-  if (blocks.length === 0) return [[]];
-
-  const pages: ContentBlock[][] = [];
-  let current: ContentBlock[] = [];
-  let currentHeight = 0;
-
-  for (const block of blocks) {
-    if (block.block_type === "PAGE_BREAK") {
-      if (current.length > 0) {
-        pages.push(current);
-        current = [];
-        currentHeight = 0;
-      }
-      continue;
-    }
-
-    const blockHeight = estimateBlockHeight(block);
-
-    // If adding it exceeds the page height (and we already have blocks), start a new page
-    if (currentHeight + blockHeight > PAGE_MAX_HEIGHT && current.length > 0) {
-      pages.push(current);
-      current = [block];
-      currentHeight = blockHeight;
-    } else {
-      current.push(block);
-      currentHeight += blockHeight;
-    }
-  }
-
-  if (current.length > 0) {
-    pages.push(current);
-  }
-
-  return pages.length > 0 ? pages : [[]];
-}
-
-// ---------------------------------------------------------------------------
-// Hook: Responsive page count
-// ---------------------------------------------------------------------------
-
-function useTwoPageLayout(): boolean {
-  const [twoPage, setTwoPage] = useState(false);
+function useReaderViewport(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+): ViewportSize {
+  const [viewport, setViewport] = useState<ViewportSize>({
+    width: 768,
+    height: 800,
+  });
 
   useEffect(() => {
-    function check() {
-      setTwoPage(window.innerWidth >= 1024);
-    }
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
+    const container = containerRef.current;
+    if (!container) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const update = () => {
+      const bounds = container.getBoundingClientRect();
+      const width = bounds.width || window.innerWidth;
+      const height = window.visualViewport?.height || window.innerHeight;
+      setViewport((current) =>
+        Math.round(current.width) === Math.round(width)
+        && Math.round(current.height) === Math.round(height)
+          ? current
+          : { width, height },
+      );
+    };
+    const debouncedUpdate = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(update, 150);
+    };
+    update();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(debouncedUpdate);
+    observer?.observe(container);
+    window.addEventListener("resize", debouncedUpdate);
+    window.visualViewport?.addEventListener("resize", debouncedUpdate);
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer?.disconnect();
+      window.removeEventListener("resize", debouncedUpdate);
+      window.visualViewport?.removeEventListener("resize", debouncedUpdate);
+    };
+  }, [containerRef]);
 
-  return twoPage;
+  return viewport;
 }
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function BookReader({
   blocks,
+  documentTitle,
+  documentVersionId,
+  contentRevision,
   pageColor,
   pageTextureOpacity,
   fontFamily,
@@ -143,24 +191,178 @@ export function BookReader({
   reducedMotion,
   onPageChange,
   initialPage,
+  initialBlockId,
   onPageTurnSound,
 }: BookReaderProps) {
-  const pages = useMemo(() => paginateBlocks(blocks), [blocks]);
-  const twoPage = useTwoPageLayout();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewport = useReaderViewport(containerRef);
+  const twoPage = viewport.width >= 1024;
   const pagesPerSpread = twoPage ? 2 : 1;
-  const [currentPageIndex, setCurrentPageIndex] = useState(() =>
-    Math.min(initialPage, Math.max(0, pages.length - 1)),
+  const pageWidth = twoPage
+    ? Math.min(580, Math.max(320, (viewport.width - 72) / 2))
+    : Math.min(600, Math.max(280, viewport.width - 32));
+  const pageHeight = Math.max(
+    380,
+    Math.min(860, viewport.height - 180, pageWidth * 1.42),
   );
+  const horizontalPadding = viewport.width >= 640 ? 80 : 48;
+  const contentWidth = Math.max(
+    220,
+    Math.min(readingWidth, pageWidth - horizontalPadding),
+  );
+  const fitContextKey = useMemo(
+    () =>
+      JSON.stringify([
+        contentRevision,
+        documentVersionId,
+        fontFamily,
+        fontSize,
+        lineHeight,
+        readingWidth,
+        twoPage,
+        Math.round(viewport.height),
+        Math.round(viewport.width),
+      ]),
+    [
+      contentRevision,
+      documentVersionId,
+      fontFamily,
+      fontSize,
+      lineHeight,
+      readingWidth,
+      twoPage,
+      viewport.height,
+      viewport.width,
+    ],
+  );
+  const [fitState, setFitState] = useState({
+    contextKey: "",
+    adjustment: 0,
+  });
+  const fitAdjustment =
+    fitState.contextKey === fitContextKey ? fitState.adjustment : 0;
+  const availableHeight = Math.max(220, pageHeight - 116 - fitAdjustment);
+  const [measurements, setMeasurements] = useState<BlockMeasurementMap>(
+    () => new Map(),
+  );
+  const [measurementFailed, setMeasurementFailed] = useState(false);
+  const paginationKey = useMemo(
+    () =>
+      createPaginationCacheKey({
+        documentVersionId,
+        contentRevision,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        fontFamily,
+        fontSize,
+        lineHeight,
+        readingWidth,
+        readingMode: `${twoPage ? "book-spread" : "book-single"}:fit-${fitAdjustment}`,
+      }),
+    [
+      contentRevision,
+      documentVersionId,
+      fitAdjustment,
+      fontFamily,
+      fontSize,
+      lineHeight,
+      readingWidth,
+      twoPage,
+      viewport.height,
+      viewport.width,
+    ],
+  );
+  const metrics = useMemo(
+    () => ({
+      availableHeight,
+      contentWidth,
+      fontSize,
+      lineHeight,
+    }),
+    [availableHeight, contentWidth, fontSize, lineHeight],
+  );
+  const computedContentPages = useMemo(
+    () => paginateMeasuredBlocks(blocks, measurements, metrics),
+    [blocks, measurements, metrics],
+  );
+  const contentPages =
+    measurements.size === 0
+      ? getCachedPageMap(paginationKey) ?? computedContentPages
+      : computedContentPages;
+
+  useEffect(() => {
+    setCachedPageMap(paginationKey, contentPages);
+  }, [contentPages, paginationKey]);
+
+  const displayPages = useMemo(
+    () => buildBookDisplayPages(contentPages),
+    [contentPages],
+  );
+
+  const handleMeasurements = useCallback(
+    (next: BlockMeasurementMap, failed: boolean) => {
+      setMeasurementFailed(failed);
+      setMeasurements(next);
+    },
+    [],
+  );
+
+  const handlePageOverflow = useCallback(
+    (_pageNumber: number, overflowPixels: number) => {
+      setFitState((current) => ({
+        contextKey: fitContextKey,
+        adjustment: Math.min(
+          200,
+          (current.contextKey === fitContextKey ? current.adjustment : 0)
+            + Math.ceil(overflowPixels)
+            + 8,
+        ),
+      }));
+    },
+    [fitContextKey],
+  );
+
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const initialPageApplied = useRef(false);
+  const anchorBlockId = useRef<string | null>(null);
 
-  // Sync initial page only once
   useEffect(() => {
     if (initialPageApplied.current) return;
     initialPageApplied.current = true;
-    const targetPage = Math.min(initialPage, Math.max(0, pages.length - 1));
-    setCurrentPageIndex(targetPage);
-  }, [initialPage, pages.length]);
+    const sourcePage = initialPage + 1;
+    const restoredIndex = displayPages.findIndex((page) =>
+      page.items.some((item) =>
+        initialBlockId
+          ? item.block.id === initialBlockId
+          : item.block.page_number >= sourcePage
+      ),
+    );
+    const index = restoredIndex >= 0 ? restoredIndex : 0;
+    anchorBlockId.current = initialBlockId;
+    setCurrentPageIndex(twoPage ? Math.floor(index / 2) * 2 : index);
+  }, [displayPages, initialBlockId, initialPage, twoPage]);
+
+  useEffect(() => {
+    const anchor = anchorBlockId.current;
+    if (anchor) {
+      const anchorPage = displayPages.findIndex((page) =>
+        page.items.some((item) => item.block.id === anchor),
+      );
+      if (anchorPage >= 0) {
+        setCurrentPageIndex(
+          twoPage ? Math.floor(anchorPage / 2) * 2 : anchorPage,
+        );
+        return;
+      }
+    }
+    setCurrentPageIndex((current) =>
+      Math.min(
+        twoPage ? Math.floor(current / 2) * 2 : current,
+        Math.max(0, displayPages.length - 1),
+      ),
+    );
+  }, [displayPages, twoPage]);
 
   const style = useMemo(
     () => ({ fontFamily, fontSize, lineHeight, readingWidth }),
@@ -169,60 +371,53 @@ export function BookReader({
 
   const handlePageChange = useCallback(
     (newPage: number) => {
-      const clamped = Math.max(0, Math.min(newPage, pages.length - 1));
+      const clamped = Math.max(
+        0,
+        Math.min(newPage, displayPages.length - 1),
+      );
+      if (clamped === currentPageIndex) return;
       setDirection(clamped > currentPageIndex ? 1 : -1);
       setCurrentPageIndex(clamped);
-
-      // Play sound
       onPageTurnSound();
-
-      // Report progress
-      const pageBlocks = pages[clamped];
-      if (pageBlocks && pageBlocks.length > 0) {
-        onPageChange(pageBlocks[0].page_number, pageBlocks[0].id);
+      const firstItem = displayPages[clamped]?.items[0];
+      if (firstItem) {
+        anchorBlockId.current = firstItem.block.id;
+        onPageChange(
+          firstItem.block.source_page_number || firstItem.block.page_number,
+          firstItem.block.id,
+          clamped + 1,
+        );
       }
     },
-    [pages, onPageChange, onPageTurnSound],
+    [
+      currentPageIndex,
+      onPageChange,
+      onPageTurnSound,
+      displayPages,
+    ],
   );
 
-  // Blocks for current spread
-  const leftBlocks = pages[currentPageIndex] ?? [];
-  const rightBlocks = twoPage ? (pages[currentPageIndex + 1] ?? []) : [];
-
-  // Framer motion variants for the 3D page turn (real book flip)
-  const pageVariants = {
-    enter: (dir: number) => ({
-      rotateY: dir > 0 ? 90 : -90,
-      opacity: 0,
-      filter: "brightness(0.5)",
-      transformOrigin: dir > 0 ? "right center" : "left center",
-    }),
-    center: (dir: number) => ({
-      zIndex: 1,
-      rotateY: 0,
-      opacity: 1,
-      filter: "brightness(1)",
-      transformOrigin: dir > 0 ? "right center" : "left center",
-      transition: {
-        rotateY: { type: "spring", stiffness: 150, damping: 25 },
-        opacity: { duration: 0.2 },
-      },
-    }),
-    exit: (dir: number) => ({
-      zIndex: 0,
-      rotateY: dir < 0 ? 90 : -90,
-      opacity: 0,
-      filter: "brightness(0.5)",
-      transformOrigin: dir < 0 ? "right center" : "left center",
-      transition: {
-        rotateY: { type: "spring", stiffness: 150, damping: 25 },
-        opacity: { duration: 0.2 },
-      },
-    }),
-  };
+  const leftPage = displayPages[currentPageIndex];
+  const rightPage = twoPage ? displayPages[currentPageIndex + 1] : undefined;
+  const leftBlocks = leftPage?.items ?? [];
+  const rightBlocks = rightPage?.items ?? [];
 
   return (
-    <div className="px-4 py-6 overflow-hidden">
+    <div
+      className="overflow-hidden px-4 py-6"
+      data-measurement-fallback={measurementFailed || undefined}
+      ref={containerRef}
+    >
+      <PaginationMeasurer
+        availableHeight={availableHeight}
+        blocks={blocks}
+        contentWidth={contentWidth}
+        fontFamily={fontFamily}
+        fontSize={fontSize}
+        lineHeight={lineHeight}
+        measurementKey={paginationKey}
+        onMeasure={handleMeasurements}
+      />
       <PageTurnController
         animationEnabled={animationEnabled}
         currentPage={currentPageIndex}
@@ -230,39 +425,54 @@ export function BookReader({
         onPageChange={handlePageChange}
         pagesPerSpread={pagesPerSpread}
         reducedMotion={reducedMotion}
-        totalPages={pages.length}
+        totalPages={displayPages.length}
       >
         <PageSpread
-          direction={direction}
+          animationClass=""
           animationEnabled={animationEnabled && !reducedMotion}
           animatingSide="none"
-          animationClass=""
           bookmarks={bookmarks}
+          direction={direction}
           highlightQuery={highlightQuery}
           highlightedBlock={highlightedBlock}
           highlights={highlights}
-          keywordsEnabled={keywordsEnabled}
           keywords={keywords}
+          keywordsEnabled={keywordsEnabled}
           leftBlocks={leftBlocks}
-          leftPageNumber={currentPageIndex + 1}
+          leftChapterTitle={leftPage?.chapterTitle}
+          leftPageKind={leftPage?.kind ?? "blank"}
+          leftPageNumber={leftPage?.contentPageNumber ?? null}
+          documentTitle={documentTitle}
           onBookmark={onBookmark}
           onKeywordSelect={onKeywordSelect}
+          onPageOverflow={handlePageOverflow}
           onSelection={onSelection}
           pageColor={pageColor}
+          pageHeight={pageHeight}
           pageTextureOpacity={pageTextureOpacity}
           rightBlocks={rightBlocks}
-          rightPageNumber={currentPageIndex + 2}
+          rightChapterTitle={rightPage?.chapterTitle}
+          rightPageExists={Boolean(rightPage)}
+          rightPageKind={rightPage?.kind ?? "blank"}
+          rightPageNumber={rightPage?.contentPageNumber ?? null}
           style={style}
           twoPage={twoPage}
-          totalPages={pages.length}
         />
       </PageTurnController>
 
-      {/* Reading progress bar */}
-      <div className="mx-auto mt-4 max-w-[600px] bg-[var(--reader-surface-muted)]" style={{ height: "3px", borderRadius: "2px" }}>
+      <div
+        className="mx-auto mt-4 max-w-[600px] bg-[var(--reader-surface-muted)]"
+        style={{ borderRadius: "2px", height: "3px" }}
+      >
         <div
           className="reading-progress-bar"
-          style={{ width: `${pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0}%` }}
+          style={{
+            width: `${
+              displayPages.length
+                ? ((currentPageIndex + 1) / displayPages.length) * 100
+                : 0
+            }%`,
+          }}
         />
       </div>
     </div>

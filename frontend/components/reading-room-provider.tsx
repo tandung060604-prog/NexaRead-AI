@@ -5,19 +5,20 @@ import {
   ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import {
-  DEFAULT_ROOM_ID,
   getRoomById,
   ReadingRoom,
   READING_ROOMS,
 } from "@/config/reading-rooms";
 import {
   ImmersivePreferences,
+  getDefaultImmersivePreferences,
+  hasPersistedImmersivePreferences,
   loadImmersivePreferences,
   ReadingMode,
   saveImmersivePreferences,
@@ -72,27 +73,58 @@ type ReadingRoomProviderProps = {
   children: ReactNode;
 };
 
-export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
-  const [preferences, setPreferences] = useState<ImmersivePreferences>(() =>
-    loadImmersivePreferences(),
-  );
-  const [roomSelectorOpen, setRoomSelectorOpen] = useState(
-    () => loadImmersivePreferences().selectedRoom === DEFAULT_ROOM_ID,
-  );
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const subscribeToHydration = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerHydratedSnapshot = () => false;
 
-  // Detect reduced motion preference
-  const [reducedMotion, setReducedMotion] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+function subscribeToReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function getReducedMotionSnapshot() {
+  return (
+    typeof window !== "undefined"
+    && window.matchMedia(REDUCED_MOTION_QUERY).matches
   );
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const handler = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+}
+
+export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot,
+  );
+  const storedPreferences = useMemo(
+    () =>
+      hydrated
+        ? loadImmersivePreferences()
+        : getDefaultImmersivePreferences(),
+    [hydrated],
+  );
+  const [preferenceOverride, setPreferenceOverride] =
+    useState<ImmersivePreferences | null>(null);
+  const preferences = preferenceOverride ?? storedPreferences;
+  const selectorInitiallyOpen = useMemo(
+    () => hydrated && !hasPersistedImmersivePreferences(),
+    [hydrated],
+  );
+  const [roomSelectorOverride, setRoomSelectorOverride] =
+    useState<boolean | null>(null);
+  const roomSelectorOpen =
+    roomSelectorOverride ?? selectorInitiallyOpen;
+  const setRoomSelectorOpen = useCallback((open: boolean) => {
+    setRoomSelectorOverride(open);
   }, []);
+
+  const reducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getReducedMotionSnapshot,
+    () => false,
+  );
 
   // Force minimal-focus when reduced motion is on and current room has motion
   const effectiveRoomId = useMemo(() => {
@@ -108,16 +140,16 @@ export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
   const selectRoom = useCallback(
     (id: string) => {
       const next = saveImmersivePreferences({ selectedRoom: id });
-      setPreferences(next);
+      setPreferenceOverride(next);
       setRoomSelectorOpen(false);
     },
-    [],
+    [setRoomSelectorOpen],
   );
 
   const updatePreferences = useCallback(
     (patch: Partial<ImmersivePreferences>) => {
       const next = saveImmersivePreferences(patch);
-      setPreferences(next);
+      setPreferenceOverride(next);
     },
     [],
   );
@@ -125,7 +157,7 @@ export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
   const setReadingMode = useCallback(
     (mode: ReadingMode) => {
       const next = saveImmersivePreferences({ readingMode: mode });
-      setPreferences(next);
+      setPreferenceOverride(next);
     },
     [],
   );
@@ -143,7 +175,16 @@ export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
       roomSelectorOpen,
       setRoomSelectorOpen,
     }),
-    [room, selectRoom, preferences, updatePreferences, setReadingMode, reducedMotion, roomSelectorOpen],
+    [
+      room,
+      selectRoom,
+      preferences,
+      updatePreferences,
+      setReadingMode,
+      reducedMotion,
+      roomSelectorOpen,
+      setRoomSelectorOpen,
+    ],
   );
 
   // Apply room CSS variables to the reading-room container
@@ -154,6 +195,7 @@ export function ReadingRoomProvider({ children }: ReadingRoomProviderProps) {
       "--room-shadow-color": "rgba(0,0,0,0.12)",
       "--room-overlay-opacity": String(room.overlayOpacity),
       "--room-accent": room.accent,
+      "--room-accent-foreground": room.accentForeground,
     } as React.CSSProperties),
     [room],
   );

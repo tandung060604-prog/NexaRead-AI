@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.document import Document, DocumentVersion, ProcessingJob
+from app.models.document import Collection, Document, DocumentVersion, ProcessingJob
 from app.services.queue import DocumentQueue, QueueError
 from app.services.storage import StorageError, StorageService
 
@@ -40,6 +40,10 @@ class DocumentQueueError(RuntimeError):
     pass
 
 
+class DocumentAlreadyProcessingError(RuntimeError):
+    pass
+
+
 _SOURCE_MIME = {
     "pdf": "application/pdf",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -47,6 +51,19 @@ _SOURCE_MIME = {
 }
 _EXTENSION_SOURCE = {".pdf": "pdf", ".docx": "docx", ".epub": "epub"}
 _EXECUTABLE_SIGNATURES = (b"MZ", b"\x7fELF", b"#!")
+_DOCUMENT_TYPES = {
+    "BOOK",
+    "TEXTBOOK",
+    "LECTURE",
+    "RESEARCH_PAPER",
+    "THESIS",
+    "TECHNICAL",
+    "REPORT",
+    "LEGAL",
+    "WORK",
+    "WEB_ARTICLE",
+    "OTHER",
+}
 
 
 @dataclass(frozen=True)
@@ -167,7 +184,16 @@ async def create_document(
     file: UploadFile,
     owner_id: str,
     max_size_bytes: int,
+    *,
+    document_type_override: str | None = None,
+    collection_id: UUID | None = None,
 ) -> Document:
+    document_type_override, collection_id = await validate_document_metadata(
+        session,
+        owner_id,
+        document_type_override=document_type_override,
+        collection_id=collection_id,
+    )
     validated = await validate_document_upload(file, max_size_bytes)
     document_id = uuid4()
     version_id = uuid4()
@@ -187,7 +213,14 @@ async def create_document(
         source_type=validated.source_type,
         mime_type=validated.mime_type,
         file_size=len(validated.data),
-        status="QUEUED",
+        collection_id=collection_id,
+        layout_type=(
+            layout_type_for_document_type(document_type_override)
+            if document_type_override
+            else "GENERAL_DOCUMENT"
+        ),
+        document_type_override=document_type_override,
+        status="SAFETY_CHECK",
         versions=[
             DocumentVersion(
                 id=version_id,
@@ -200,8 +233,8 @@ async def create_document(
             ProcessingJob(
                 document_version_id=version_id,
                 job_type="document_processing",
-                status="QUEUED",
-                progress=0,
+                status="SAFETY_CHECK",
+                progress=10,
             )
         ],
     )
@@ -260,6 +293,8 @@ async def get_document(session: AsyncSession, document_id: UUID, owner_id: str) 
         .options(
             selectinload(Document.versions),
             selectinload(Document.processing_jobs),
+            selectinload(Document.collection),
+            selectinload(Document.tags),
         )
     )
     if document is None:
@@ -287,6 +322,156 @@ async def rename_document(
     return await get_document(session, document_id, owner_id)
 
 
+def layout_type_for_document_type(document_type: str) -> str:
+    if document_type in {"BOOK", "TEXTBOOK"}:
+        return "BOOK"
+    if document_type in {"RESEARCH_PAPER", "THESIS"}:
+        return "PAPER"
+    if document_type == "TECHNICAL":
+        return "TECHNICAL_DOCUMENTATION"
+    if document_type == "WEB_ARTICLE":
+        return "BLOG_ARTICLE"
+    return "GENERAL_DOCUMENT"
+
+
+async def validate_document_metadata(
+    session: AsyncSession,
+    owner_id: str,
+    *,
+    document_type_override: str | None,
+    collection_id: UUID | None,
+) -> tuple[str | None, UUID | None]:
+    normalized_document_type = None
+    if document_type_override is not None:
+        normalized_document_type = document_type_override.strip().upper()
+        if normalized_document_type not in _DOCUMENT_TYPES:
+            raise DocumentValidationError("Unsupported document type")
+    if collection_id is not None:
+        owned_collection_id = await session.scalar(
+            select(Collection.id).where(
+                Collection.id == collection_id,
+                Collection.owner_id == owner_id,
+            )
+        )
+        if owned_collection_id is None:
+            raise DocumentValidationError("Collection not found")
+    return normalized_document_type, collection_id
+
+
+async def set_document_type_override(
+    session: AsyncSession,
+    document_id: UUID,
+    owner_id: str,
+    document_type_override: str | None,
+) -> Document:
+    document = await get_document(session, document_id, owner_id)
+    document.document_type_override = document_type_override
+    latest_metadata = (
+        max(document.versions, key=lambda version: version.version_number).pdf_metadata
+        if document.versions
+        else {}
+    )
+    detected_type = latest_metadata.get("document_type")
+    effective_type = document_type_override or (
+        detected_type if isinstance(detected_type, str) else "OTHER"
+    )
+    document.layout_type = document.layout_override or layout_type_for_document_type(
+        effective_type
+    )
+    try:
+        await session.commit()
+    except SQLAlchemyError as exc:
+        await session.rollback()
+        raise DocumentPersistenceError("Could not update document type") from exc
+    return await get_document(session, document_id, owner_id)
+
+
+async def reprocess_document(
+    session: AsyncSession,
+    storage: StorageService,
+    queue: DocumentQueue,
+    document_id: UUID,
+    owner_id: str,
+) -> Document:
+    document = await get_document(session, document_id, owner_id)
+    if not document.versions:
+        raise DocumentValidationError("Document has no source version")
+    latest_version = max(document.versions, key=lambda version: version.version_number)
+    active_statuses = {
+        "QUEUED",
+        "SAFETY_CHECK",
+        "EXTRACTING",
+        "STRUCTURING",
+        "READABLE",
+        "TOC",
+        "INDEXING",
+    }
+    if any(
+        job.document_version_id == latest_version.id and job.status in active_statuses
+        for job in document.processing_jobs
+    ):
+        raise DocumentAlreadyProcessingError("Document is already being processed")
+
+    new_version_id = uuid4()
+    new_job_id = uuid4()
+    source_suffix = PurePosixPath(latest_version.storage_key).suffix or ".bin"
+    new_storage_key = (
+        f"documents/{document.id}/versions/{new_version_id}/original{source_suffix}"
+    )
+    try:
+        source_data = await storage.download(latest_version.storage_key)
+        await storage.upload(new_storage_key, source_data, document.mime_type)
+    except StorageError as exc:
+        await session.rollback()
+        raise DocumentStorageError("Stored document could not be copied") from exc
+
+    new_version = DocumentVersion(
+        id=new_version_id,
+        document_id=document.id,
+        version_number=latest_version.version_number + 1,
+        storage_key=new_storage_key,
+        content_hash=latest_version.content_hash,
+    )
+    new_job = ProcessingJob(
+        id=new_job_id,
+        document_id=document.id,
+        document_version_id=new_version_id,
+        job_type="document_reprocessing",
+        status="SAFETY_CHECK",
+        progress=10,
+    )
+    document.versions.append(new_version)
+    document.processing_jobs.append(new_job)
+    document.status = "SAFETY_CHECK"
+    try:
+        await session.commit()
+    except SQLAlchemyError as exc:
+        await session.rollback()
+        try:
+            await storage.delete(new_storage_key)
+        except StorageError:
+            logger.exception("Failed to remove copied source after reprocess rollback")
+        raise DocumentPersistenceError("Could not create reprocessing version") from exc
+
+    try:
+        await queue.enqueue(document.id, new_version_id, new_job_id)
+    except QueueError as exc:
+        document.status = "FAILED"
+        new_job.status = "FAILED"
+        new_job.progress = 100
+        new_job.error_code = "QUEUE_UNAVAILABLE"
+        new_job.error_message = "Document reprocessing could not be queued."
+        try:
+            await session.commit()
+        except SQLAlchemyError as persistence_exc:
+            await session.rollback()
+            raise DocumentPersistenceError(
+                "Could not save reprocessing queue failure"
+            ) from persistence_exc
+        raise DocumentQueueError("Document reprocessing queue is unavailable") from exc
+    return await get_document(session, document.id, owner_id)
+
+
 async def delete_document(
     session: AsyncSession,
     storage: StorageService,
@@ -297,6 +482,8 @@ async def delete_document(
     try:
         for version in document.versions:
             await storage.delete(version.storage_key)
+            if version.cover_storage_key:
+                await storage.delete(version.cover_storage_key)
     except StorageError as exc:
         await session.rollback()
         raise DocumentStorageError("Stored document could not be deleted") from exc

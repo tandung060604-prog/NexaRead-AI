@@ -1,0 +1,4 @@
+interface:
+  display_name: "Document Layout Intelligence"
+  short_description: "Preserve source truth while repairing layout"
+  default_prompt: "Use $document-layout-intelligence to design or review a source-faithful document normalization change."

@@ -212,6 +212,34 @@ async def test_citation_records_belong_to_active_document(api_context: ApiTestCo
 
 
 @pytest.mark.anyio
+async def test_citation_resolves_to_normalized_block_and_source_page(
+    api_context: ApiTestContext,
+) -> None:
+    payload = await ready_document(api_context)
+    blocks_response = await api_context.client.get(
+        f"/api/documents/{payload['id']}/blocks"
+    )
+    blocks = blocks_response.json()["items"]
+    app.dependency_overrides[get_answer_provider] = lambda: FakeAnswerProvider()
+
+    response = await api_context.client.post(
+        f"/api/documents/{payload['id']}/chat",
+        json={"question": "What does NexaRead extract into stable content blocks?"},
+    )
+
+    assert response.status_code == 200
+    citation = response.json()["citations"][0]
+    cited_block = next(
+        block for block in blocks if block["id"] == citation["content_block_id"]
+    )
+    assert cited_block["source_text"]
+    assert cited_block["display_text"]
+    assert cited_block["source_anchor"]["page_number"] == citation["page_number"]
+    assert cited_block["source_page_number"] == citation["page_number"]
+    assert cited_block["source_anchor"]["source_block_ids"]
+
+
+@pytest.mark.anyio
 async def test_stream_generator_can_be_interrupted() -> None:
     from app.api.routes.rag import stream_chat_events
 

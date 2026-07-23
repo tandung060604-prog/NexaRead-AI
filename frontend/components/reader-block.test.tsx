@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
+import { translate } from "@/lib/i18n";
 
 import { ReaderBlock } from "./reader-block";
 
@@ -11,6 +12,30 @@ const block: ContentBlock = {
   sequence_number: 1,
   block_type: "PARAGRAPH",
   text: "NexaRead renders technical content safely.",
+  source_text: "NexaRead renders technical content safely.",
+  display_text: "NexaRead renders technical content safely.",
+  transformation_log: [],
+  transformation_confidence: 1,
+  needs_review: false,
+  source_anchor: {
+    page_number: 1,
+    source_block_ids: ["block-1"],
+    source_start_offset: 0,
+    source_end_offset: 42,
+  },
+  semantic_role: "paragraph",
+  heading_level: null,
+  keep_with_next: false,
+  avoid_break_inside: false,
+  break_before: false,
+  break_after: false,
+  indent_level: 0,
+  text_align: "left",
+  is_first_paragraph: true,
+  is_chapter_opening: false,
+  caption_for_asset_id: null,
+  footnote_reference: null,
+  source_page_number: 1,
   page_number: 1,
   chapter_index: null,
   section_index: null,
@@ -114,7 +139,11 @@ describe("ReaderBlock", () => {
     const onKeywordSelect = vi.fn();
     renderBlock(block, [], [keyword], onKeywordSelect);
 
-    const term = screen.getByRole("button", { name: "Technical term: Technical content" });
+    const term = screen.getByRole("button", {
+      name: translate("vi", "reader", "block.technicalTerm", {
+        name: "Technical content",
+      }),
+    });
     fireEvent.focus(term);
 
     expect(screen.getByRole("tooltip")).toHaveTextContent("Specialized content about technology.");
@@ -135,15 +164,58 @@ describe("ReaderBlock", () => {
     };
     renderBlock(block, [overlappingHighlight], [keyword]);
 
-    const term = screen.getByRole("button", { name: "Technical term: Technical content" });
+    const term = screen.getByRole("button", {
+      name: translate("vi", "reader", "block.technicalTerm", {
+        name: "Technical content",
+      }),
+    });
     expect(term.closest("mark")).toHaveAttribute("data-highlight-id", "highlight-overlap");
+  });
+
+  it("preserves source highlight offsets when rendering a page fragment", () => {
+    const fragmentHighlight = {
+      ...highlight,
+      id: "fragment-highlight",
+      start_offset: 9,
+      end_offset: 16,
+      selected_text: "renders",
+    };
+    const view = render(
+      <ReaderBlock
+        block={block}
+        bookmarked={false}
+        highlighted={false}
+        highlights={[fragmentHighlight]}
+        keywords={[]}
+        onBookmark={vi.fn()}
+        onKeywordSelect={vi.fn()}
+        onSelection={vi.fn()}
+        query=""
+        rangeEnd={34}
+        rangeStart={9}
+      />,
+    );
+
+    expect(screen.getByText("renders")).toHaveAttribute(
+      "data-highlight-id",
+      "fragment-highlight",
+    );
+    const fragment = view.container.querySelector(
+      `[id="block-${block.id}-fragment-9"]`,
+    );
+    expect(fragment).toHaveAttribute("data-source-start", "9");
+    expect(fragment).toHaveAttribute("data-source-end", "34");
+    expect(fragment).toHaveTextContent(block.text.slice(9, 34));
+    expect(fragment).not.toHaveTextContent("NexaRead");
   });
 
   it("syntax-highlights and copies code", async () => {
     const code = { ...block, block_type: "CODE" as const, text: "const answer = 42;", metadata: { language: "javascript" } };
     renderBlock(code);
 
-    fireEvent.click(screen.getByRole("button", { name: "Copy code" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "block.copyCode"),
+    }));
 
     await waitFor(() => expect(navigator.clipboard.writeText).toHaveBeenCalledWith(code.text));
     expect(document.querySelector(".hljs-keyword")).toBeInTheDocument();

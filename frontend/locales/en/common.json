@@ -1,0 +1,64 @@
+{
+  "brand": "NexaRead",
+  "nav": {
+    "public": "Public navigation",
+    "primary": "Primary navigation",
+    "mobilePrimary": "Mobile application navigation",
+    "dashboard": "Dashboard",
+    "library": "Library",
+    "upload": "Upload document",
+    "account": "Account",
+    "login": "Log in",
+    "register": "Start free",
+    "logout": "Log out"
+  },
+  "locale": {
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "updating": "Changing language…"
+  },
+  "account": {
+    "title": "Account",
+    "email": "Email",
+    "loading": "Loading account…",
+    "preferredLanguage": "Preferred language",
+    "manageSessions": "Manage sign-in sessions",
+    "security": "Security",
+    "sessions": "Sign-in sessions",
+    "sessionsDescription": "Review and revoke devices with access to your account.",
+    "loadingSessions": "Loading sign-in sessions…",
+    "currentDevice": "Current device",
+    "otherSession": "Sign-in session",
+    "unknownDevice": "Device information unavailable",
+    "expires": "Expires {date}",
+    "revokeCurrent": "Revoke current device",
+    "revokeSession": "Revoke sign-in session",
+    "revokeAll": "Revoke all sessions"
+  },
+  "status": {
+    "loading": "Loading…",
+    "saving": "Saving",
+    "saved": "Saved",
+    "failed": "Failed",
+    "authenticating": "Authenticating…"
+  },
+  "actions": {
+    "open": "Open",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "confirm": "Confirm"
+  },
+  "accessibility": {
+    "skipToContent": "Skip navigation and go to main content"
+  },
+  "health": {
+    "eyebrow": "System status",
+    "title": "Frontend is healthy",
+    "application": "Next.js application",
+    "healthy": "Healthy"
+  }
+}

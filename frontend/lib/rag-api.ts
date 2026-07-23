@@ -31,14 +31,22 @@ export async function askDocument(
   question: string,
   sessionId?: string,
 ): Promise<RagMessage> {
-  const response = await fetch(`${API_URL}/api/documents/${documentId}/chat`, {
+  const response = await authenticatedFetch(`${API_URL}/api/documents/${documentId}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question, session_id: sessionId ?? null, stream: false }),
   });
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(payload?.detail ?? "Document chat is unavailable.");
+    const payload = (await response.json().catch(() => null)) as {
+      detail?: string | { code?: string };
+    } | null;
+    const detail = payload?.detail;
+    throw new Error(
+      typeof detail === "string"
+        ? detail
+        : detail?.code ?? "Document chat is unavailable.",
+    );
   }
   return response.json() as Promise<RagMessage>;
 }
+import { authenticatedFetch } from "@/lib/auth-api";

@@ -138,7 +138,9 @@ class KeywordFeedback(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     document_id: Mapped[UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), index=True
     )
@@ -163,7 +165,9 @@ class UserKeywordPreference(Base):
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     user_level: Mapped[str] = mapped_column(String(32), default="BEGINNER")
     enabled_categories: Mapped[list[str]] = mapped_column(

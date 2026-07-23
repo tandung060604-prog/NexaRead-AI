@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Bookmark, ContentBlock, Highlight } from "@/lib/documents-api";
+import { translate } from "@/lib/i18n";
 
 import { AnnotationPanel, SelectionToolbar } from "./reader-tools";
 
@@ -69,8 +70,12 @@ describe("reader annotation tools", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "green highlight" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save highlight" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: `${translate("vi", "reader", "annotations.colors.green")} ${translate("vi", "reader", "highlights")}`,
+    }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.save"),
+    }));
 
     expect(onCreate).toHaveBeenCalledWith("green");
   });
@@ -79,9 +84,15 @@ describe("reader annotation tools", () => {
     const props = panel();
 
     fireEvent.click(screen.getByRole("button", { name: "Saved block" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete bookmark Saved block" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.deleteBookmark", {
+        title: bookmark.title,
+      }),
+    }));
     fireEvent.click(screen.getByRole("button", { name: "Saved" }));
-    fireEvent.click(screen.getByRole("button", { name: "Delete highlight" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.deleteHighlight"),
+    }));
 
     expect(props.onNavigate).toHaveBeenCalledWith(block.id);
     expect(props.onDeleteBookmark).toHaveBeenCalledWith(bookmark);
@@ -91,24 +102,38 @@ describe("reader annotation tools", () => {
   it("adds and autosave-statuses a note", async () => {
     const onSaveNote = vi.fn().mockResolvedValue(undefined);
     panel({ onSaveNote });
-    const textarea = screen.getByRole("textbox", { name: "Note for Saved" });
+    const textarea = screen.getByRole("textbox", {
+      name: translate("vi", "reader", "annotations.noteFor", { text: "Saved" }),
+    });
 
     fireEvent.change(textarea, { target: { value: "My note" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.saveNote"),
+    }));
 
-    expect(screen.getByText("Saving")).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+    expect(
+      screen.getByText(translate("vi", "common", "status.saving")),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(
+      screen.getByText(translate("vi", "common", "status.saved")),
+    ).toBeInTheDocument());
     expect(onSaveNote).toHaveBeenCalledWith(highlight, "My note");
   });
 
   it("shows note save failure", async () => {
     panel({ onSaveNote: vi.fn().mockRejectedValue(new Error("offline")) });
-    fireEvent.change(screen.getByRole("textbox", { name: "Note for Saved" }), {
+    fireEvent.change(screen.getByRole("textbox", {
+      name: translate("vi", "reader", "annotations.noteFor", { text: "Saved" }),
+    }), {
       target: { value: "Will fail" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.saveNote"),
+    }));
 
-    expect(await screen.findByText("Failed")).toBeInTheDocument();
+    expect(
+      await screen.findByText(translate("vi", "common", "status.failed")),
+    ).toBeInTheDocument();
   });
 
   it("edits and deletes an existing note", async () => {
@@ -126,12 +151,18 @@ describe("reader annotation tools", () => {
     const onDeleteNote = vi.fn().mockResolvedValue(undefined);
     panel({ highlights: [existing], onSaveNote, onDeleteNote });
 
-    fireEvent.change(screen.getByRole("textbox", { name: "Note for Saved" }), {
+    fireEvent.change(screen.getByRole("textbox", {
+      name: translate("vi", "reader", "annotations.noteFor", { text: "Saved" }),
+    }), {
       target: { value: "Edited note" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.saveNote"),
+    }));
     await waitFor(() => expect(onSaveNote).toHaveBeenCalledWith(existing, "Edited note"));
-    fireEvent.click(screen.getByRole("button", { name: "Delete note" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "annotations.deleteNote"),
+    }));
 
     expect(onDeleteNote).toHaveBeenCalledWith(existing);
   });

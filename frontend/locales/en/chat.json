@@ -1,0 +1,13 @@
+{
+  "title": "AI assistant",
+  "sectionLabel": "Ask this document",
+  "description": "Answers are grounded in this document and include source links.",
+  "questionLabel": "Ask a question about this document",
+  "placeholder": "Ask about this document…",
+  "send": "Ask",
+  "checking": "Checking sources…",
+  "sources": "Citation sources",
+  "sourcePage": "page {page}",
+  "failed": "Document chat failed.",
+  "noAnswer": "There is not enough evidence in the document to answer."
+}
