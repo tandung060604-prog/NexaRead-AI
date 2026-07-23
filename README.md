@@ -5,6 +5,8 @@ NexaRead AI is an AI-powered reading and knowledge assistant for turning documen
 ## Key Features
 
 - Next.js web application with upload, library, document detail, and health pages
+- Registration, password login, protected application routes, account identity, logout, and session revocation
+- Vietnamese-first product localization with an English switcher and persisted account language preference
 - PDF, DOCX, and EPUB validation by extension, size, MIME signature/package structure, executable rejection, and ZIP safety limits
 - Document upload to S3-compatible object storage using UUID-based object keys
 - List, detail, rename, and confirmed-delete document workflows
@@ -38,7 +40,7 @@ OCR, multi-document chat, crawling, web search, autonomous agents, and PPTX rema
 ## Tech Stack
 
 - Frontend: Next.js, React, TypeScript, Tailwind CSS, TanStack Virtual, Lucide, KaTeX, Highlight.js, Vitest
-- Backend: FastAPI, Pydantic Settings, SQLAlchemy, Alembic, boto3, PyMuPDF, python-docx, EbookLib, BeautifulSoup, bleach, pytest
+- Backend: FastAPI, Pydantic Settings, SQLAlchemy, Alembic, Argon2id, boto3, PyMuPDF, python-docx, EbookLib, BeautifulSoup, bleach, pytest
 - Background processing: Dramatiq with Redis
 - Data services: PostgreSQL, Redis, and S3-compatible object storage
 - Local object storage: MinIO
@@ -73,6 +75,7 @@ Copy `.env.example` to `.env` before running the backend or Docker stack. When o
 | `SERVICE_NAME` | Backend service identifier returned by `/health` |
 | `FRONTEND_URL` | Frontend URL for local integration |
 | `NEXT_PUBLIC_API_URL` | API base URL used by the frontend |
+| `NEXT_PUBLIC_SITE_URL` | Canonical frontend origin used for social metadata |
 | `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` | Frontend document size limit; keep aligned with the backend |
 | `BACKEND_HOST` | Backend bind host outside Docker |
 | `BACKEND_PORT` | Published backend port |
@@ -85,7 +88,11 @@ Copy `.env.example` to `.env` before running the backend or Docker stack. When o
 | `S3_CONSOLE_PORT` | Published MinIO console port |
 | `DATABASE_URL` | Async SQLAlchemy PostgreSQL connection URL |
 | `REDIS_URL` | Redis connection URL |
-| `DEFAULT_OWNER_ID` | Temporary local owner used before authentication is implemented |
+| `AUTH_SESSION_HOURS` | Cookie-session lifetime in hours |
+| `AUTH_RATE_LIMIT_PER_MINUTE` | Per-IP registration/login limit; `0` disables it for tests only |
+| `AUTH_COOKIE_NAME` | HttpOnly authentication cookie name |
+| `AUTH_CSRF_COOKIE_NAME` | Double-submit CSRF cookie name |
+| `AUTH_IP_HASH_KEY` | HMAC key for privacy-preserving session IP hashes; required in production |
 | `S3_ENDPOINT` | S3-compatible endpoint used outside Docker |
 | `S3_ACCESS_KEY` | Local object-storage access key |
 | `S3_SECRET_KEY` | Local object-storage secret key |
@@ -152,7 +159,9 @@ cd frontend
 npm run dev
 ```
 
-Open `http://localhost:3000`, upload a supported document or import a public article URL, wait for `AI_READY`, then open `/documents/{document_id}/read`.
+Open `http://localhost:3000/register`, create an account, upload a supported
+document or import a public article URL, wait for `AI_READY`, then open
+`/documents/{document_id}/read`.
 
 ## Run Services Separately
 
@@ -218,13 +227,35 @@ Validate Docker Compose from the repository root:
 docker compose config --quiet
 ```
 
+## Authentication API
+
+Authentication uses an opaque HttpOnly cookie backed by a hashed database
+session. Browser mutation requests also send the CSRF cookie value in the
+`X-CSRF-Token` header. Session tokens, CSRF tokens, and passwords are never
+stored in plaintext.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | Create an account and issue a session |
+| `POST` | `/api/auth/login` | Verify credentials and issue a session |
+| `POST` | `/api/auth/logout` | Revoke the current session and clear cookies |
+| `GET` | `/api/auth/me` | Read the current authenticated user |
+| `PATCH` | `/api/auth/me` | Persist the authenticated user's `vi` or `en` language preference |
+| `GET` | `/api/auth/sessions` | List active sessions for the current user |
+| `DELETE` | `/api/auth/sessions/{session_id}` | Revoke one owned session |
+| `DELETE` | `/api/auth/sessions` | Revoke every session for the current user |
+
+The public frontend routes are `/`, `/login`, and `/register`. Library, upload,
+document, reader, and account routes require a session. Password reset and
+external identity providers remain outside Phase 1.
+
 ## Document API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/documents/upload` | Validate and upload one PDF, DOCX, or EPUB using multipart field `file` |
 | `POST` | `/api/documents/import-url` | Safely import one public HTTP/HTTPS article URL |
-| `GET` | `/api/documents?limit=50&offset=0` | List documents for the current local owner |
+| `GET` | `/api/documents?limit=50&offset=0` | List documents for the authenticated user |
 | `GET` | `/api/documents/{document_id}` | Read document metadata, versions, and processing jobs |
 | `PATCH` | `/api/documents/{document_id}` | Rename a document with JSON body `{ "title": "..." }` |
 | `DELETE` | `/api/documents/{document_id}` | Delete object storage data and database metadata |
@@ -258,28 +289,54 @@ Uploaded and imported content is untrusted. The backend sniffs supported formats
 
 ## Document Processing Lifecycle
 
-`UPLOADED` -> `QUEUED` -> `EXTRACTING` -> `STRUCTURING` -> `AI_READY`
+`UPLOADING` -> `SAFETY_CHECK` -> `EXTRACTING` -> `STRUCTURING` -> `READABLE` -> `TOC` -> `INDEXING` -> `COMPLETE`
 
-Text-poor or scanned files become `OCR_REQUIRED`. Damaged, encrypted, or unparseable files become `FAILED` with a safe error code. The original object remains available in both cases. Reprocessing replaces pages and blocks for the same version in one database transaction.
+At `READABLE`, source-faithful blocks and the clean display representation are
+available while AI indexing continues. The document becomes `AI_READY` when
+the processing job reaches `COMPLETE`. Text-poor or scanned files become
+`OCR_REQUIRED`. Damaged, encrypted, or unparseable files become `FAILED` with a
+safe error code. The original object remains available in both cases.
+Reprocessing creates a new version from the immutable stored source so prior
+versions and annotations remain stored.
+
+The deterministic layout pipeline keeps `text`/`source_text` authoritative for
+search, RAG evidence, and citations. `display_text`, transformation logs,
+semantic roles, pagination hints, quality scores, and warnings are additive.
+Optional AI repair is disabled by default and may return only validated
+block-ID ordering/grouping metadata; failed or invalid repairs use the
+deterministic output unchanged.
 
 ## Manual Test Checklist
 
-1. Start the complete Docker stack and frontend, then open `/upload`; upload PDF/DOCX/EPUB fixtures and import one public article URL.
-2. Open its reader and verify the stage advances from `QUEUED` to `READABLE` without blocking the upload request.
-3. Verify headings, paragraphs, page separators, TOC anchors, page indicator, and lexical search.
-4. Open the original PDF and verify it is served through the protected backend endpoint.
-5. Refresh after navigating and verify progress resumes for that document.
-6. Upload a blank/image-only PDF and verify the OCR-required message and original-PDF fallback.
-7. Upload a damaged PDF and verify the safe failure state without stack trace or storage details.
-8. Reprocess the same job in tests and verify page/block counts do not increase.
-9. Rename and delete the document from Library and verify Milestone 2 behavior still works.
-10. Change theme, font size, spacing, width, and Focus Mode; reload and verify preferences persist.
-11. Bookmark a block, select text inside one block, choose a highlight color, and add/edit/delete its note.
-12. Reload the reader and verify progress, bookmarks, highlights, and notes are restored.
-13. Test a generated 5,000-block fixture and verify only a bounded virtual window is mounted.
-14. Open a detected technical term by mouse and keyboard; verify its tooltip and glossary definition.
-15. Change reader level and category, then verify term density and explanations update after reload.
-16. Navigate between term occurrences, submit feedback, and verify user highlights remain visible when ranges overlap.
+1. Start the complete Docker stack and frontend, register two accounts, and verify login, logout, return-to routing, and session revocation.
+2. Verify a signed-out request to `/library` redirects to `/login` and the public landing page has no application sidebar.
+3. Upload a private fixture with Account A; verify Account B cannot list, read, download, search, annotate, or chat with it, including by guessing identifiers.
+4. Open `/upload`; upload PDF/DOCX/EPUB fixtures and import one public article URL.
+5. Verify upload/detail shows all eight stages from `UPLOADING` through `COMPLETE`, and that the reader opens at `READABLE` while indexing continues.
+6. Verify headings, paragraphs, page separators, TOC anchors, page indicator, and lexical search.
+7. Open the original PDF and verify it is served through the protected backend endpoint.
+8. Refresh after navigating and verify progress resumes for that document.
+9. Upload a blank/image-only PDF and verify the OCR-required message and original-PDF fallback.
+10. Upload a damaged PDF and verify the safe failure state without stack trace or storage details.
+11. Override the detected document type, reprocess it, and verify a new version is created while previous-version data remains intact.
+12. Rename and delete the document from Library and verify Milestone 2 behavior still works.
+13. Change theme, font size, spacing, width, and Focus Mode; reload and verify preferences persist.
+14. Bookmark a block, select text inside one block, choose a highlight color, and add/edit/delete its note.
+15. Reload the reader and verify progress, bookmarks, highlights, and notes are restored.
+16. Test a generated 5,000-block fixture and verify only a bounded virtual window is mounted.
+17. Open a detected technical term by mouse and keyboard; verify its tooltip and glossary definition.
+18. Change reader level and category, then verify term density and explanations update after reload.
+19. Navigate between term occurrences, submit feedback, and verify user highlights remain visible when ranges overlap.
+20. Switch between Vietnamese and English from the header and account page; verify the root document language, dates, numbers, validation states, reader controls, and persisted preference update together.
+21. Check landing, login, and register at 375x812, 768x1024, 1280x800, 1440x900, and 1920x1080 with no horizontal overflow.
+22. Verify empty/populated Library, Upload, and Processing states at mobile and desktop breakpoints.
+23. In book mode, verify one page is mounted on mobile and only the current two-page spread is mounted on desktop.
+24. Verify TOC navigation reaches the measured page containing code, table, image, and formula blocks.
+25. Verify reader pages have no nested scroll, ArrowRight changes page, mobile swipe works, and reduced motion removes the animated delay.
+26. Verify mobile dialogs trap focus, Escape closes them, and focus returns to the trigger.
+27. Verify light, sepia, and dark themes meet WCAG AA contrast and preserve visible focus.
+28. Run the 100/1,000/5,000-block performance fixtures and the 500-document library fixture.
+29. Run the Phase 8 release/layout evaluations and migration/checkpoint gates documented in `docs/agent/PHASE_8_REPORT.md`.
 
 ## Supported Imports
 
@@ -300,13 +357,19 @@ Text-poor or scanned files become `OCR_REQUIRED`. Damaged, encrypted, or unparse
 - Ambiguous multi-column pages keep PyMuPDF's original block order
 - Highlights are intentionally limited to one `ContentBlock`; cross-block selection is rejected
 - Tables, formulas, and images render when structured metadata or a protected derived artifact exists
-- Authentication is not implemented yet; the configured local owner remains the temporary user boundary
+- Password login and hashed cookie sessions are implemented; password reset and external identity providers are not yet available
 
 ## Development Status
 
 Milestones 7 and 8 are implemented and validated locally. Multi-format ingestion shares one normalized block pipeline with Reader, keywords, annotations, and RAG. The repository includes release evaluation, health/readiness, structured safe logging, Redis AI rate limiting, CI/container scanning, deployment workflows, and operations/security documentation.
 
-This workspace has not been deployed to a real staging or production account because no Railway/Vercel deployment credentials or environment targets are configured. Authentication is also intentionally absent; `DEFAULT_OWNER_ID` remains a local boundary. Do not expose the app publicly until verified authentication and the external production controls in `docs/security.md` are in place.
+This workspace has not been deployed to a real staging or production account
+because no Railway/Vercel deployment credentials or environment targets are
+configured. Password authentication and database-backed tenant isolation are
+implemented, but production exposure still requires external security review,
+TLS, managed secrets, and the controls listed in `docs/security.md`. The
+complete migration chain has been validated on local PostgreSQL 16;
+production-like deployment and rollback rehearsal remains required.
 ## Project Documentation
 
 - [Product Brief](docs/product-brief.md)
@@ -315,3 +378,8 @@ This workspace has not been deployed to a real staging or production account bec
 - [Security Controls](docs/security.md)
 - [Deployment Guide](docs/deployment.md)
 - [Production Runbook](docs/runbooks/production.md)
+- [Phase 1 Authentication and Isolation Report](docs/agent/PHASE_1_REPORT.md)
+- [Phase 2 Localization Report](docs/agent/PHASE_2_REPORT.md)
+- [Phase 3 Document Layout Intelligence Report](docs/agent/PHASE_3_REPORT.md)
+- [Phase 4 Reading Experience Report](docs/agent/PHASE_4_REPORT.md)
+- [Phase 8 Testing and Quality Gates Report](docs/agent/PHASE_8_REPORT.md)

@@ -1,0 +1,277 @@
+# Last Checkpoint
+
+- Phase: `PHASE_8`
+- Task: `NR-800`
+- Status: `complete`
+- Branch: `codex/phase-8-complete`
+- Commit: ``
+- Updated: `2026-07-24T00:50:50+07:00`
+- Safe to handoff: `true`
+
+## Changed files
+
+- scripts/agent_checkpoint.py
+- scripts/test_agent_checkpoint.py
+- .agent/TASK_STATE.json
+- .agent/LAST_CHECKPOINT.md
+- docs/agent/README.md
+- docs/agent/WORKLOG.md
+- docs/agent/HANDOFF.md
+- docs/agent/TEST_LOG.md
+- docs/decisions/README.md
+- docs/agent/BASELINE_REPORT.md
+- backend/app/models/auth.py
+- backend/app/models/__init__.py
+- backend/app/models/document.py
+- backend/app/models/annotation.py
+- backend/app/models/keyword.py
+- backend/app/models/rag.py
+- backend/migrations/versions/20260723_0007_authentication.py
+- backend/app/db/session.py
+- backend/migrations/env.py
+- backend/pyproject.toml
+- backend/tests/test_auth_models.py
+- backend/app/schemas/auth.py
+- backend/app/services/auth.py
+- backend/app/services/auth_rate_limit.py
+- backend/app/api/routes/auth.py
+- backend/app/api/dependencies.py
+- backend/app/api/router.py
+- backend/app/main.py
+- backend/app/core/config.py
+- backend/tests/test_auth_api.py
+- backend/tests/test_auth_rate_limit.py
+- .env.example
+- README.md
+- backend/tests/conftest.py
+- docker-compose.yml
+- docs/security.md
+- backend/tests/test_cross_account_isolation.py
+- backend/tests/test_auth_config.py
+- frontend/app/account/page.tsx
+- frontend/app/account/sessions/page.tsx
+- frontend/app/login/page.tsx
+- frontend/app/register/page.tsx
+- frontend/components/auth-form.tsx
+- frontend/components/auth-form.test.tsx
+- frontend/components/auth-provider.tsx
+- frontend/components/session-manager.tsx
+- frontend/components/session-manager.test.tsx
+- frontend/components/site-shell.test.tsx
+- frontend/lib/auth-api.ts
+- frontend/lib/auth-api.test.ts
+- frontend/proxy.ts
+- frontend/proxy.test.ts
+- docs/agent/PHASE_1_REPORT.md
+- frontend/locales/vi/common.json
+- frontend/locales/en/common.json
+- frontend/locales/vi/auth.json
+- frontend/locales/en/auth.json
+- frontend/locales/vi/errors.json
+- frontend/locales/en/errors.json
+- frontend/locales/vi/library.json
+- frontend/locales/en/library.json
+- frontend/locales/vi/upload.json
+- frontend/locales/en/upload.json
+- frontend/locales/vi/reader.json
+- frontend/locales/en/reader.json
+- frontend/locales/vi/chat.json
+- frontend/locales/en/chat.json
+- frontend/locales/vi/landing.json
+- frontend/locales/en/landing.json
+- frontend/lib/i18n.ts
+- frontend/lib/i18n.test.ts
+- frontend/components/i18n-provider.tsx
+- frontend/components/i18n-provider.test.tsx
+- frontend/components/language-selector.tsx
+- frontend/app/layout.tsx
+- frontend/app/page.tsx
+- frontend/app/page.test.tsx
+- frontend/app/health/page.tsx
+- frontend/app/library/page.tsx
+- frontend/app/upload/page.tsx
+- frontend/components/site-shell.tsx
+- frontend/components/confirm-dialog.tsx
+- frontend/components/document-library.tsx
+- frontend/components/document-library.test.tsx
+- frontend/components/document-detail.tsx
+- frontend/components/upload-form.tsx
+- frontend/components/upload-form.test.tsx
+- frontend/components/document-reader.tsx
+- frontend/components/document-reader.test.tsx
+- frontend/components/document-chat.tsx
+- frontend/components/document-chat.test.tsx
+- frontend/components/keyword-glossary.tsx
+- frontend/components/keyword-glossary.test.tsx
+- frontend/components/reader-toolbar.tsx
+- frontend/components/reader-tools.tsx
+- frontend/components/reader-tools.test.tsx
+- frontend/components/reader-block.tsx
+- frontend/components/reader-block.test.tsx
+- frontend/components/page-turn-controller.tsx
+- frontend/components/page-spread.tsx
+- frontend/components/book-reader.tsx
+- frontend/components/reader-experience.tsx
+- frontend/components/room-selector.tsx
+- frontend/components/music-player.tsx
+- frontend/components/audio-mixer.tsx
+- docs/agent/PHASE_2_REPORT.md
+- AGENTS.md
+- skills/document-layout-intelligence/SKILL.md
+- skills/document-layout-intelligence/README.md
+- skills/document-layout-intelligence/agents/openai.yaml
+- skills/document-layout-intelligence/examples/source-display-contract.json
+- skills/document-layout-intelligence/evaluation/layout-cases.json
+- backend/app/services/normalized_document.py
+- backend/app/services/processing.py
+- backend/app/schemas/reader.py
+- backend/migrations/versions/20260723_0008_source_fidelity.py
+- backend/tests/test_layout_models.py
+- backend/tests/test_reader_api.py
+- frontend/lib/documents-api.ts
+- backend/app/services/document_layout/__init__.py
+- backend/app/services/document_layout/pipeline.py
+- backend/app/services/document_layout/language.py
+- backend/app/services/document_layout/vietnamese_normalizer.py
+- backend/app/services/document_layout/paragraph_reconstruction.py
+- backend/app/services/document_layout/heading_detection.py
+- backend/app/services/document_layout/list_detection.py
+- backend/app/services/document_layout/caption_detection.py
+- backend/app/services/document_layout/footnote_detection.py
+- backend/app/services/document_layout/layout_rules.py
+- backend/app/services/document_layout/quality.py
+- backend/app/services/document_parser.py
+- backend/tests/test_document_layout.py
+- evaluation/layout_golden_dataset.json
+- evaluation/run_layout_evaluation.py
+- evaluation/reports/layout-report.json
+- backend/migrations/versions/20260723_0009_semantic_layout.py
+- backend/app/services/document_layout/ai_repair.py
+- backend/tests/test_ai_layout_repair.py
+- backend/app/schemas/document.py
+- backend/app/api/routes/documents.py
+- backend/app/services/documents.py
+- backend/app/services/url_documents.py
+- backend/app/services/reader.py
+- backend/migrations/versions/20260723_0010_processing_ux.py
+- backend/tests/test_processing_ux.py
+- backend/tests/test_documents.py
+- frontend/components/processing-timeline.tsx
+- frontend/components/processing-timeline.test.tsx
+- frontend/components/document-detail.test.tsx
+- docs/agent/PHASE_3_REPORT.md
+- frontend/lib/measured-pagination.ts
+- frontend/lib/measured-pagination.test.ts
+- frontend/components/pagination-measurer.tsx
+- frontend/components/pagination-measurer.test.tsx
+- frontend/components/book-page.tsx
+- frontend/components/book-page.test.tsx
+- backend/app/schemas/dashboard.py
+- backend/app/services/dashboard.py
+- backend/app/api/routes/dashboard.py
+- backend/tests/test_dashboard_api.py
+- frontend/lib/dashboard-api.ts
+- frontend/components/personal-dashboard.tsx
+- frontend/components/personal-dashboard.test.tsx
+- frontend/app/dashboard/page.tsx
+- backend/migrations/versions/20260723_0012_library_organization.py
+- backend/app/schemas/library.py
+- backend/app/services/library.py
+- backend/app/api/routes/library.py
+- backend/tests/test_library_organization.py
+- backend/migrations/versions/20260723_0013_document_covers.py
+- backend/app/services/document_cover.py
+- backend/tests/test_document_cover.py
+- backend/tests/test_multi_format.py
+- docs/agent/PHASE_5_REPORT.md
+- frontend/app/globals.css
+- frontend/public/og.png
+- frontend/.env.example
+- docs/agent/PHASE_6_REPORT.md
+- frontend/lib/personalization-api.ts
+- frontend/locales/vi/personalization.json
+- frontend/locales/en/personalization.json
+- frontend/components/onboarding-wizard.tsx
+- frontend/app/onboarding/page.tsx
+- frontend/components/onboarding-wizard.test.tsx
+- frontend/lib/reader-personalization.ts
+- frontend/lib/reader-personalization.test.ts
+- frontend/components/research-reference-panel.tsx
+- frontend/components/research-reference-panel.test.tsx
+- docs/agent/PHASE_7_REPORT.md
+- docs/agent/PHASE_8_REPORT.md
+- frontend/components/reading-room-provider.tsx
+- evaluation/browser_quality_server.py
+- backend/tests/test_performance_quality.py
+
+## Known failures
+
+- Frontend lint baseline has 13 warnings despite exit code 0
+- npm test failed with exit code 1
+- Nine Vitest worker forks exited unexpectedly
+- The host previously reported an undersized paging file, so this may be environment-resource related
+- Default npm test parallel workers fail in this host; all 48 tests pass with maxWorkers=1
+- frontend/next-env.d.ts was already modified by the Next.js build and is not part of Phase 0 authored scope
+- .venv/Scripts/pytest.exe tests/test_cross_account_isolation.py -q failed with exit code 1
+- Test expectation was too strict; no foreign chat data was exposed
+- .venv/Scripts/alembic.exe upgrade 20260722_0006:20260723_0007 --sql failed with exit code 1
+- TypeError: offline SELECT execution returned no iterable result
+- Frontend lint retains 13 pre-existing reader/media warnings; Vitest emits non-fatal jsdom HTMLMediaElement.pause messages
+- npm test -- --maxWorkers=1 failed with exit code 1
+- Eight localized component test files still asserted the former English UI text
+- .venv/Scripts/mypy.exe NR-310 scope (initial) failed with exit code 1
+- tests/test_layout_models.py: ContentBlock.__table__ typed as FromClause
+- npm run type-check (initial NR-310) failed with exit code 1
+- document-reader and reader-block fixtures required source/display contract fields
+- .venv/Scripts/ruff.exe check NR-320 scope (initial) failed with exit code 1
+- quality.py E501
+- test_document_layout.py unused replace import
+- .venv/Scripts/mypy.exe NR-320 scope (initial) failed with exit code 1
+- quality and layout rules metadata needed runtime type guards
+- .venv/Scripts/pytest.exe tests/test_document_layout.py -q (initial) failed with exit code 1
+- reading_order_confidence changed from 0.78 to 0.85 on a second pass
+- .venv/Scripts/pytest.exe tests/test_pdf_parser.py tests/test_multi_format.py tests/test_reader_api.py -q (initial) failed with exit code 1
+- reader API source anchor gained the intended parser provenance field
+- initial NR-440 focused Vitest failed with exit code 1
+- Three document-reader tests needed to activate the Search tab and assert distinct source/reading page labels
+- .venv/Scripts/ruff.exe check app/api/router.py app/api/routes/dashboard.py app/schemas/dashboard.py app/services/dashboard.py tests/test_dashboard_api.py; .venv/Scripts/mypy.exe app/api/routes/dashboard.py app/schemas/dashboard.py app/services/dashboard.py tests/test_dashboard_api.py; .venv/Scripts/pytest.exe tests/test_dashboard_api.py -q failed with exit code 1
+- Ruff I001 router import order; mypy UUID optional dict key and test object endswith
+- npm test -- --maxWorkers=1 components/personal-dashboard.test.tsx; npm run type-check; npm run lint -- --quiet failed with exit code 1
+- Testing Library getByText found duplicate Practical RAG nodes
+- Expected Getting Started but fixture heading is Reader Guide
+- Assertion count mismatch
+- .venv/Scripts/ruff.exe check NR-510 backend scope; .venv/Scripts/mypy.exe NR-510 backend scope; .venv/Scripts/pytest.exe tests/test_library_organization.py -q failed with exit code 1
+- SyntaxError at app/api/routes/documents.py:222 and one unused import
+- DocumentResponse unused; progress lookup required explicit helper
+- npm run type-check; npm run lint -- --quiet; npm test -- --maxWorkers=1 components/document-library.test.tsx failed with exit code 1
+- react-hooks/set-state-in-effect and duplicate Testing Library query
+- .venv/Scripts/ruff.exe check NR-520 scope; .venv/Scripts/mypy.exe NR-520 scope; .venv/Scripts/pytest.exe tests/test_document_cover.py -q failed with exit code 1
+- Ruff 6 issues; mypy 10 issues; EPUB cover test 1 failed
+- .venv/Scripts/pytest.exe tests/test_documents.py tests/test_processing_ux.py tests/test_multi_format.py tests/test_reader_api.py tests/test_document_cover.py -q failed with exit code 1
+- test_reprocess_creates_new_version expected 2 objects; valid cache adds a third object
+- Vitest emits non-fatal jsdom HTMLMediaElement.pause notices from safe audio coverage
+- npm run type-check; npm run lint -- --quiet; npm test -- --maxWorkers=1 app/page.test.tsx components/site-shell.test.tsx failed with exit code 1
+- page.test.tsx requires explicit cleanup after each test
+- Vitest retains non-fatal jsdom HTMLMediaElement.pause notices from safe audio tests
+- .venv/Scripts/ruff.exe check NR-700 backend scope; .venv/Scripts/mypy.exe NR-700 backend scope; .venv/Scripts/pytest.exe tests/test_personalization_api.py -q failed with exit code 1
+- personalization.py _personalization and _preferences require typed scalars().one_or_none()
+- New ReadingDailySummary.reading_seconds is None until flush; initialize it explicitly
+- npm run type-check; npm run lint -- --quiet; focused reader personalization Vitest failed with exit code 1
+- document-reader research test must use an all-elements assertion for duplicated navigation content
+- NR-720 backend Ruff, mypy, personalization/annotations/dashboard tests failed with exit code 1
+- test_dashboard_api expected pre-analytics stats object
+- Phase 8 focus/dialog/reader experience focused TypeScript, ESLint, Vitest failed with exit code 1
+- fireEvent.click does not focus the trigger in jsdom; focus it explicitly before opening
+- WCAG calculation found sepia reader muted text ratio 4.41:1; change token to #6d6453 or darker and add regression test
+- Readiness check default revision is stale at 20260723_0007; update to 20260723_0014 and test
+- Browser connection cannot be re-established after sleep because the app sandbox helper fails during browser startup
+
+## Next exact steps
+
+- Repeat the five-viewport browser matrix in staging with fresh-login dashboard coverage
+- Configure managed secrets, TLS, observability, backups, and external security review
+- Rehearse production-like deployment and rollback with verified backups
+
+## Next command
+
+`git log --oneline --decorate -5`

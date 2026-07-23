@@ -1,0 +1,48 @@
+{
+  "source_block": {
+    "id": "source-block-42",
+    "text": "Nexa-\nRead giữ nguyên nội dung nguồn .",
+    "page_number": 7,
+    "bounding_box": [72.0, 144.0, 420.0, 181.0],
+    "start_offset": 0,
+    "end_offset": 38
+  },
+  "display_block": {
+    "source_text": "Nexa-\nRead giữ nguyên nội dung nguồn .",
+    "display_text": "NexaRead giữ nguyên nội dung nguồn.",
+    "transformation_log": [
+      {
+        "rule": "line_break_dehyphenation",
+        "source_range": [0, 10],
+        "result_range": [0, 8]
+      },
+      {
+        "rule": "space_before_punctuation",
+        "source_range": [32, 34],
+        "result_range": [30, 31]
+      }
+    ],
+    "transformation_confidence": 0.97,
+    "needs_review": false,
+    "source_anchor": {
+      "page_number": 7,
+      "bounding_box": [72.0, 144.0, 420.0, 181.0],
+      "source_block_ids": ["source-block-42"],
+      "source_start_offset": 0,
+      "source_end_offset": 38
+    },
+    "semantic_role": "paragraph",
+    "heading_level": null,
+    "keep_with_next": false,
+    "avoid_break_inside": false,
+    "break_before": false,
+    "break_after": false,
+    "indent_level": 0,
+    "text_align": "left",
+    "is_first_paragraph": false,
+    "is_chapter_opening": false,
+    "caption_for_asset_id": null,
+    "footnote_reference": null,
+    "source_page_number": 7
+  }
+}
