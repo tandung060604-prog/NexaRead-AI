@@ -24,6 +24,36 @@ class ProcessingStatus:
     error_code: str | None
     error_message: str | None
     page_count: int | None
+    completed_stages: tuple[str, ...]
+
+
+PROCESSING_STAGE_ORDER = (
+    "UPLOADING",
+    "SAFETY_CHECK",
+    "EXTRACTING",
+    "STRUCTURING",
+    "READABLE",
+    "TOC",
+    "INDEXING",
+    "COMPLETE",
+)
+
+
+def _completed_processing_stages(stage: str, progress: int) -> tuple[str, ...]:
+    if stage in PROCESSING_STAGE_ORDER:
+        position = PROCESSING_STAGE_ORDER.index(stage)
+        end = position + 1 if stage == "COMPLETE" else position
+        return PROCESSING_STAGE_ORDER[:end]
+    progress_thresholds = (1, 10, 25, 50, 65, 75, 85, 100)
+    return tuple(
+        stage_name
+        for stage_name, threshold in zip(
+            PROCESSING_STAGE_ORDER,
+            progress_thresholds,
+            strict=True,
+        )
+        if progress >= threshold
+    )
 
 
 async def _get_owned_version(
@@ -68,6 +98,10 @@ async def get_processing_status(
         error_code=job.error_code if job else None,
         error_message=job.error_message if job else None,
         page_count=version.page_count,
+        completed_stages=_completed_processing_stages(
+            job.status if job else document.status,
+            job.progress if job else 0,
+        ),
     )
 
 

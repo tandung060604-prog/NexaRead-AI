@@ -7,10 +7,12 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.api.dependencies import get_current_owner_id
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_database_session
 from app.main import app
+from app.models.auth import User
 from app.services.queue import DocumentQueue, get_document_queue
 from app.services.storage import StorageError, StorageService, get_storage_service
 
@@ -59,6 +61,9 @@ class ApiTestContext:
     session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
+TEST_OWNER_ID = "local-user"
+
+
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
@@ -70,13 +75,16 @@ def force_local_rag_provider() -> Iterator[None]:
     settings = get_settings()
     original_provider = settings.rag_provider
     original_rate_limit = settings.ai_rate_limit_per_minute
+    original_auth_rate_limit = settings.auth_rate_limit_per_minute
     settings.rag_provider = "local"
     settings.ai_rate_limit_per_minute = 0
+    settings.auth_rate_limit_per_minute = 0
     try:
         yield
     finally:
         settings.rag_provider = original_provider
         settings.ai_rate_limit_per_minute = original_rate_limit
+        settings.auth_rate_limit_per_minute = original_auth_rate_limit
 
 
 @pytest.fixture
@@ -99,6 +107,19 @@ async def api_context() -> AsyncIterator[ApiTestContext]:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+    async with session_factory() as session:
+        session.add(
+            User(
+                id=TEST_OWNER_ID,
+                email="legacy@nexaread.invalid",
+                normalized_email="legacy@nexaread.invalid",
+                display_name="Legacy test user",
+                password_hash="!legacy-account-disabled!",
+                preferred_locale="vi",
+                is_active=False,
+            )
+        )
+        await session.commit()
 
     async def override_database_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
@@ -113,6 +134,7 @@ async def api_context() -> AsyncIterator[ApiTestContext]:
     app.dependency_overrides[get_database_session] = override_database_session
     app.dependency_overrides[get_storage_service] = override_storage_service
     app.dependency_overrides[get_document_queue] = override_document_queue
+    app.dependency_overrides[get_current_owner_id] = lambda: TEST_OWNER_ID
     transport = httpx.ASGITransport(app=app)
 
     try:

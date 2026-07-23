@@ -49,6 +49,11 @@ class ParsedBlock:
     content_hash: str
     parent_sequence_number: int | None
     local_id: str | None = None
+    display_text: str | None = None
+    transformation_log: list[dict[str, object]] = field(default_factory=list)
+    transformation_confidence: float = 1.0
+    needs_review: bool = False
+    source_anchor: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

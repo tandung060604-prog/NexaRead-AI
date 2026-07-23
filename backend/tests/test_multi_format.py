@@ -191,11 +191,23 @@ async def test_import_url_api_queues_sanitized_source(
         )
 
     monkeypatch.setattr("app.services.url_documents.fetch_url", fake_fetch)
+    collection = await api_context.client.post(
+        "/api/collections",
+        json={"name": "Web research"},
+    )
     response = await api_context.client.post(
-        "/api/documents/import-url", json={"url": "https://example.com/article"}
+        "/api/documents/import-url",
+        json={
+            "url": "https://example.com/article",
+            "document_type_override": "technical",
+            "collection_id": collection.json()["id"],
+        },
     )
     assert response.status_code == 201
     payload = response.json()
     assert payload["source_type"] == "url"
     assert payload["source_url"] == "https://example.com/article"
+    assert payload["document_type_override"] == "TECHNICAL"
+    assert payload["layout_type"] == "TECHNICAL_DOCUMENTATION"
+    assert payload["collection_id"] == collection.json()["id"]
     assert len(api_context.queue.messages) == 1

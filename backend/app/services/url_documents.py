@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from urllib.parse import urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from bs4 import BeautifulSoup
 from sqlalchemy.exc import SQLAlchemyError
@@ -17,7 +17,9 @@ from app.services.documents import (
     DocumentStorageError,
     DocumentValidationError,
     get_document,
+    layout_type_for_document_type,
     sanitize_filename,
+    validate_document_metadata,
 )
 from app.services.queue import DocumentQueue, QueueError
 from app.services.storage import StorageError, StorageService
@@ -33,7 +35,16 @@ async def create_url_document(
     url: str,
     owner_id: str,
     settings: Settings,
+    *,
+    document_type_override: str | None = None,
+    collection_id: UUID | None = None,
 ) -> Document:
+    document_type_override, collection_id = await validate_document_metadata(
+        session,
+        owner_id,
+        document_type_override=document_type_override,
+        collection_id=collection_id,
+    )
     try:
         fetched = await fetch_url(
             url,
@@ -66,7 +77,12 @@ async def create_url_document(
         source_url=fetched.final_url,
         mime_type=fetched.content_type,
         file_size=len(fetched.data),
-        status="QUEUED",
+        collection_id=collection_id,
+        layout_type=layout_type_for_document_type(
+            document_type_override or "WEB_ARTICLE"
+        ),
+        document_type_override=document_type_override,
+        status="SAFETY_CHECK",
         versions=[
             DocumentVersion(
                 id=version_id,
@@ -79,8 +95,8 @@ async def create_url_document(
             ProcessingJob(
                 document_version_id=version_id,
                 job_type="document_processing",
-                status="QUEUED",
-                progress=0,
+                status="SAFETY_CHECK",
+                progress=10,
             )
         ],
     )

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.services.document_layout import LayoutRepairProvider, normalize_document_layout
+from app.services.document_layout.layout_rules import layout_type_for
 from app.services.docx_parser import parse_docx
 from app.services.epub_parser import parse_epub
 from app.services.normalized_document import DocumentParseError, NormalizedDocument
@@ -16,6 +18,12 @@ LAYOUT_TYPES = {
 
 
 def classify_layout(document: NormalizedDocument, source_type: str) -> str:
+    document_type = document.metadata.get(
+        "effective_document_type",
+        document.metadata.get("document_type"),
+    )
+    if isinstance(document_type, str):
+        return layout_type_for(document_type)
     if source_type == "epub":
         return "BOOK"
     if source_type == "url":
@@ -39,6 +47,10 @@ def parse_document(
     *,
     source_url: str | None = None,
     minimum_text_characters: int = 20,
+    document_type_override: str | None = None,
+    layout_ai_repair_enabled: bool = False,
+    layout_repair_provider: LayoutRepairProvider | None = None,
+    layout_ai_repair_confidence_threshold: float = 0.7,
 ) -> NormalizedDocument:
     if source_type == "pdf":
         parsed = parse_pdf(data, minimum_text_characters=minimum_text_characters)
@@ -50,6 +62,14 @@ def parse_document(
         parsed = parse_web_page(data, source_url)
     else:
         raise DocumentParseError("UNSUPPORTED_SOURCE_TYPE")
+    parsed = normalize_document_layout(
+        parsed,
+        source_type,
+        document_type_override=document_type_override,
+        ai_repair_enabled=layout_ai_repair_enabled,
+        repair_provider=layout_repair_provider,
+        ai_repair_confidence_threshold=layout_ai_repair_confidence_threshold,
+    )
     parsed.metadata["layout_type"] = classify_layout(parsed, source_type)
     parsed.metadata["warnings"] = parsed.warnings
     parsed.metadata["assets"] = [
