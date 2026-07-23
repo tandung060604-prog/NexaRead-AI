@@ -1,8 +1,11 @@
 "use client";
 
 import type { ContentBlock, Highlight, KeywordOccurrence } from "@/lib/documents-api";
+import type { PaginatedBlock } from "@/lib/measured-pagination";
 import type { BlockSelection } from "./reader-block";
 import { motion } from "framer-motion";
+
+import { useI18n } from "@/components/i18n-provider";
 
 import { BookPage } from "./book-page";
 
@@ -16,13 +19,19 @@ type PageSpreadProps = {
   /** Whether the animation should play. */
   animationEnabled?: boolean;
   /** Left page blocks (empty array if this is page 1 in a pair). */
-  leftBlocks: ContentBlock[];
+  leftBlocks: PaginatedBlock[];
   /** Right page blocks. */
-  rightBlocks: ContentBlock[];
+  rightBlocks: PaginatedBlock[];
   /** Left page number. */
-  leftPageNumber: number;
+  leftPageNumber: number | null;
   /** Right page number (may exceed total pages for the last page). */
-  rightPageNumber: number;
+  rightPageNumber: number | null;
+  leftPageKind: "cover" | "title" | "content" | "blank";
+  rightPageKind: "cover" | "title" | "content" | "blank";
+  rightPageExists: boolean;
+  leftChapterTitle?: string | null;
+  rightChapterTitle?: string | null;
+  documentTitle: string;
   /** Whether to show two pages (desktop) or one (mobile/narrow). */
   twoPage: boolean;
   /** Page color from room config. */
@@ -36,12 +45,11 @@ type PageSpreadProps = {
     lineHeight: number;
     readingWidth: number;
   };
+  pageHeight: number;
   /** Animation class applied to the page being turned. */
   animationClass: string;
   /** Which page (left/right) is being animated. "none" means no animation. */
   animatingSide: "left" | "right" | "none";
-  /** Total number of content pages. */
-  totalPages: number;
   /** Reader block props. */
   highlights: Map<string, Highlight[]>;
   keywords: Map<string, KeywordOccurrence[]>;
@@ -52,6 +60,7 @@ type PageSpreadProps = {
   onBookmark: (block: ContentBlock) => void;
   onSelection: (selection: BlockSelection) => void;
   onKeywordSelect: (occurrence: KeywordOccurrence) => void;
+  onPageOverflow?: (pageNumber: number, overflowPixels: number) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -67,9 +76,9 @@ export function PageSpread({
   pageColor,
   pageTextureOpacity,
   style,
+  pageHeight,
   animationClass,
   animatingSide,
-  totalPages,
   highlights,
   keywords,
   bookmarks,
@@ -79,13 +88,22 @@ export function PageSpread({
   onBookmark,
   onSelection,
   onKeywordSelect,
+  onPageOverflow,
   animationEnabled,
   direction,
+  leftPageKind,
+  rightPageKind,
+  leftChapterTitle,
+  rightChapterTitle,
+  documentTitle,
+  rightPageExists,
 }: PageSpreadProps) {
+  const { t } = useI18n();
   const sharedProps = {
     pageColor,
     pageTextureOpacity,
     style,
+    pageHeight,
     highlights,
     keywords,
     bookmarks,
@@ -95,6 +113,7 @@ export function PageSpread({
     onBookmark,
     onSelection,
     onKeywordSelect,
+    onOverflow: onPageOverflow,
   };
 
   if (!twoPage) {
@@ -105,6 +124,9 @@ export function PageSpread({
           {...sharedProps}
           animationClass={animationClass}
           blocks={leftBlocks}
+          chapterTitle={leftChapterTitle}
+          documentTitle={documentTitle}
+          pageKind={leftPageKind}
           pageNumber={leftPageNumber}
           position="single"
         />
@@ -113,7 +135,7 @@ export function PageSpread({
   }
 
   // Desktop: two-page spread
-  const showRight = rightPageNumber <= totalPages;
+  const showRight = rightPageExists;
 
   // Realistic page flip animations
   // When going next (direction = 1), the new left page flips in from the right.
@@ -138,7 +160,7 @@ export function PageSpread({
 
       {/* Left page */}
       <motion.div
-        key={`left-${leftPageNumber}`}
+        key={`left-${leftPageKind}-${leftPageNumber ?? "front"}`}
         className="w-1/2 max-w-[580px] relative z-10 origin-right"
         initial={isAnimatingLeft ? "initial" : false}
         animate="animate"
@@ -149,6 +171,9 @@ export function PageSpread({
           {...sharedProps}
           animationClass={animatingSide === "left" ? animationClass : ""}
           blocks={leftBlocks}
+          chapterTitle={leftChapterTitle}
+          documentTitle={documentTitle}
+          pageKind={leftPageKind}
           pageNumber={leftPageNumber}
           position="left"
         />
@@ -161,7 +186,7 @@ export function PageSpread({
 
       {/* Right page */}
       <motion.div
-        key={`right-${rightPageNumber}`}
+        key={`right-${rightPageKind}-${rightPageNumber ?? "front"}`}
         className="w-1/2 max-w-[580px] relative z-10 origin-left"
         initial={isAnimatingRight ? "initial" : false}
         animate="animate"
@@ -176,18 +201,24 @@ export function PageSpread({
             {...sharedProps}
             animationClass={animatingSide === "right" ? animationClass : ""}
             blocks={rightBlocks}
+            chapterTitle={rightChapterTitle}
+            documentTitle={documentTitle}
+            pageKind={rightPageKind}
             pageNumber={rightPageNumber}
             position="right"
           />
         ) : (
           <div
-            className="book-page flex min-h-[70vh] h-full items-center justify-center"
+            className="book-page flex h-full items-center justify-center"
             style={{
               borderRadius: "0 4px 4px 0",
+              height: `${pageHeight}px`,
               "--room-page-color": pageColor,
             } as Record<string, string>}
           >
-            <p className="text-sm text-[var(--reader-muted)]">End of document</p>
+            <p className="text-sm text-[var(--reader-muted)]">
+              {t("reader", "endDocument")}
+            </p>
           </div>
         )}
       </motion.div>

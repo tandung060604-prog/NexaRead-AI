@@ -5,6 +5,7 @@ import katex from "katex";
 import { Bookmark, BookmarkCheck, Check, Copy } from "lucide-react";
 import { ReactNode, useMemo, useRef, useState } from "react";
 
+import { useI18n } from "@/components/i18n-provider";
 import {
   ContentBlock,
   Highlight,
@@ -29,6 +30,8 @@ type ReaderBlockProps = {
   onBookmark: (block: ContentBlock) => void;
   onSelection: (selection: BlockSelection) => void;
   onKeywordSelect: (occurrence: KeywordOccurrence) => void;
+  rangeStart?: number;
+  rangeEnd?: number;
 };
 
 const HIGHLIGHT_CLASSES: Record<Highlight["color"], string> = {
@@ -68,6 +71,7 @@ function AnnotatedText({
   query: string;
   onKeywordActivate: (occurrence: KeywordOccurrence, target: HTMLElement) => void;
 }) {
+  const { t } = useI18n();
   const segments: ReactNode[] = [];
   const active = highlights
     .filter(
@@ -112,7 +116,9 @@ function AnnotatedText({
     if (keyword) {
       content = (
         <button
-          aria-label={`Technical term: ${keyword.keyword.canonical_name}`}
+          aria-label={t("reader", "block.technicalTerm", {
+            name: keyword.keyword.canonical_name,
+          })}
           className="border-b border-dotted border-[var(--reader-accent)] bg-[var(--notice-soft)]/60 text-inherit outline-offset-2"
           data-keyword-id={keyword.keyword.id}
           key={`keyword-${keyword.id}-${start}`}
@@ -130,7 +136,7 @@ function AnnotatedText({
           className={`${HIGHLIGHT_CLASSES[highlight.color]} rounded-[2px] px-0.5 text-inherit`}
           data-highlight-id={highlight.id}
           key={`highlight-${highlight.id}-${start}`}
-          title={highlight.note?.content ?? "Saved highlight"}
+          title={highlight.note?.content ?? t("reader", "block.savedHighlight")}
         >
           {content}
         </mark>
@@ -142,6 +148,7 @@ function AnnotatedText({
 }
 
 function CodeBlock({ block }: { block: ContentBlock }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const language = typeof block.metadata.language === "string" ? block.metadata.language : "";
   const highlightedCode = useMemo(() => {
@@ -163,12 +170,14 @@ function CodeBlock({ block }: { block: ContentBlock }) {
   return (
     <div className="my-6 overflow-hidden border border-[var(--reader-border)] bg-[var(--code)]">
       <div className="flex h-10 items-center justify-between border-b border-[var(--reader-border)] px-3">
-        <span className="text-xs font-semibold text-[var(--reader-muted)]">{language || "Code"}</span>
+        <span className="text-xs font-semibold text-[var(--reader-muted)]">
+          {language || t("reader", "block.code")}
+        </span>
         <button
-          aria-label="Copy code"
+          aria-label={t("reader", "block.copyCode")}
           className="grid size-8 place-items-center hover:bg-[var(--reader-surface-muted)]"
           onClick={() => void copyCode()}
-          title="Copy code"
+          title={t("reader", "block.copyCode")}
           type="button"
         >
           {copied ? <Check aria-hidden="true" size={16} /> : <Copy aria-hidden="true" size={16} />}
@@ -215,6 +224,7 @@ function TableBlock({ block }: { block: ContentBlock }) {
 }
 
 function FormulaBlock({ block }: { block: ContentBlock }) {
+  const { t } = useI18n();
   const formula = typeof block.metadata.formula === "string" ? block.metadata.formula : block.text;
   let markup: string | null = null;
   try {
@@ -233,7 +243,7 @@ function FormulaBlock({ block }: { block: ContentBlock }) {
   }
   return (
     <div
-      aria-label={`Formula: ${formula}`}
+      aria-label={t("reader", "block.formula", { formula })}
       className="my-8 overflow-x-auto py-4 text-center text-[1.1em]"
       dangerouslySetInnerHTML={{ __html: markup }}
     />
@@ -241,13 +251,14 @@ function FormulaBlock({ block }: { block: ContentBlock }) {
 }
 
 function ImageBlock({ block }: { block: ContentBlock }) {
+  const { t } = useI18n();
   return (
     <figure className="my-8 flex flex-col items-center">
       {/* The URL is an ownership-checked API endpoint, never a public object URL. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <div className="relative rounded-sm bg-white p-2 shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-[var(--reader-border)]/50">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          alt={block.text || "Document figure"}
+          alt={block.text || t("reader", "block.figure")}
           className="max-h-[50vh] max-w-full object-contain mix-blend-multiply"
           loading="lazy"
           src={protectedBlockImageUrl(block.id)}
@@ -255,7 +266,7 @@ function ImageBlock({ block }: { block: ContentBlock }) {
       </div>
       {block.text ? (
         <figcaption className="mt-4 text-center text-[0.8em] font-medium italic text-[var(--reader-muted)] px-6">
-          Figure: {block.text}
+          {t("reader", "block.figureCaption", { text: block.text })}
         </figcaption>
       ) : null}
     </figure>
@@ -272,13 +283,64 @@ export function ReaderBlock({
   onBookmark,
   onSelection,
   onKeywordSelect,
+  rangeStart = 0,
+  rangeEnd = block.text.length,
 }: ReaderBlockProps) {
+  const { t } = useI18n();
   const textRoot = useRef<HTMLElement | null>(null);
   const [tooltip, setTooltip] = useState<{
     occurrence: KeywordOccurrence;
     left: number;
     top: number;
   } | null>(null);
+  const safeRangeStart = Math.max(0, Math.min(rangeStart, block.text.length));
+  const safeRangeEnd = Math.max(
+    safeRangeStart,
+    Math.min(rangeEnd, block.text.length),
+  );
+  const visibleText = block.text.slice(safeRangeStart, safeRangeEnd);
+  const visibleHighlights = useMemo(
+    () =>
+      highlights
+        .filter(
+          (item) =>
+            item.end_offset > safeRangeStart
+            && item.start_offset < safeRangeEnd,
+        )
+        .map((item) => ({
+          ...item,
+          start_offset: Math.max(item.start_offset, safeRangeStart) - safeRangeStart,
+          end_offset: Math.min(item.end_offset, safeRangeEnd) - safeRangeStart,
+        })),
+    [highlights, safeRangeEnd, safeRangeStart],
+  );
+  const visibleKeywords = useMemo(
+    () =>
+      keywords
+        .filter(
+          (item) =>
+            item.end_offset > safeRangeStart
+            && item.start_offset < safeRangeEnd,
+        )
+        .map((item) => ({
+          ...item,
+          start_offset: Math.max(item.start_offset, safeRangeStart) - safeRangeStart,
+          end_offset: Math.min(item.end_offset, safeRangeEnd) - safeRangeStart,
+        })),
+    [keywords, safeRangeEnd, safeRangeStart],
+  );
+  const renderedBlock = useMemo(
+    () =>
+      safeRangeStart === 0 && safeRangeEnd === block.text.length
+        ? block
+        : {
+            ...block,
+            text: visibleText,
+            source_text: visibleText,
+            display_text: visibleText,
+          },
+    [block, safeRangeEnd, safeRangeStart, visibleText],
+  );
 
   function activateKeyword(occurrence: KeywordOccurrence, target: HTMLElement) {
     const bounds = target.getBoundingClientRect();
@@ -292,11 +354,11 @@ export function ReaderBlock({
 
   const content = (
     <AnnotatedText
-      highlights={highlights}
-      keywords={keywords}
+      highlights={visibleHighlights}
+      keywords={visibleKeywords}
       onKeywordActivate={activateKeyword}
       query={query}
-      text={block.text}
+      text={visibleText}
     />
   );
   const emphasis = `${block.is_bold ? "font-semibold" : ""} ${block.is_italic ? "italic" : ""}`;
@@ -311,7 +373,7 @@ export function ReaderBlock({
     const before = range.cloneRange();
     before.selectNodeContents(root);
     before.setEnd(range.startContainer, range.startOffset);
-    const startOffset = before.toString().length;
+    const startOffset = safeRangeStart + before.toString().length;
     const endOffset = startOffset + range.toString().length;
     if (block.text.slice(startOffset, endOffset) !== range.toString()) return;
     onSelection({ block, startOffset, endOffset, selectedText: range.toString() });
@@ -336,22 +398,22 @@ export function ReaderBlock({
       blockContent = <ul className={`${commonClass} mb-1 list-disc pl-7`}><li className={`pl-1 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot}>{content}</li></ul>;
       break;
     case "CODE":
-      blockContent = <CodeBlock block={block} />;
+      blockContent = <CodeBlock block={renderedBlock} />;
       break;
     case "QUOTE":
       blockContent = <blockquote className={`${commonClass} mb-3 mt-1 border-l-4 border-[var(--reader-accent)] pl-5 italic`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</blockquote>;
       break;
     case "PAGE_BREAK":
-      blockContent = <div aria-label={`End of page ${block.page_number}`} className="my-6 flex items-center gap-4 text-xs text-[var(--reader-muted)]" role="separator"><span className="h-px flex-1 bg-[var(--reader-border)]" />Page {block.page_number}<span className="h-px flex-1 bg-[var(--reader-border)]" /></div>;
+      blockContent = <div aria-label={t("reader", "block.endSourcePage", { page: block.page_number })} className="my-6 flex items-center gap-4 text-xs text-[var(--reader-muted)]" role="separator"><span className="h-px flex-1 bg-[var(--reader-border)]" />{t("reader", "sourcePage")} {block.page_number}<span className="h-px flex-1 bg-[var(--reader-border)]" /></div>;
       break;
     case "TABLE":
-      blockContent = <TableBlock block={block} />;
+      blockContent = <TableBlock block={renderedBlock} />;
       break;
     case "FORMULA":
-      blockContent = <FormulaBlock block={block} />;
+      blockContent = <FormulaBlock block={renderedBlock} />;
       break;
     case "IMAGE":
-      blockContent = <ImageBlock block={block} />;
+      blockContent = <ImageBlock block={renderedBlock} />;
       break;
     default:
       blockContent = <p className={`${commonClass} mb-2 mt-0 ${emphasis}`} onMouseUp={captureSelection} ref={setTextRoot} tabIndex={-1}>{content}</p>;
@@ -361,17 +423,31 @@ export function ReaderBlock({
     <div
       className="group relative px-1 py-1"
       data-page={block.page_number}
-      id={`block-${block.id}`}
+      data-source-end={safeRangeEnd}
+      data-source-start={safeRangeStart}
+      id={
+        safeRangeStart === 0
+          ? `block-${block.id}`
+          : `block-${block.id}-fragment-${safeRangeStart}`
+      }
       onKeyDown={(event) => {
         if (event.key === "Escape") setTooltip(null);
       }}
     >
       {block.block_type !== "PAGE_BREAK" ? (
         <button
-          aria-label={bookmarked ? "Remove bookmark" : "Bookmark block"}
+          aria-label={
+            bookmarked
+              ? t("reader", "removeBookmark")
+              : t("reader", "addBookmark")
+          }
           className="absolute -right-1 top-2 grid size-8 place-items-center text-[var(--reader-muted)] opacity-0 transition-opacity hover:text-[var(--reader-accent)] focus:opacity-100 group-hover:opacity-100"
           onClick={() => onBookmark(block)}
-          title={bookmarked ? "Remove bookmark" : "Bookmark block"}
+          title={
+            bookmarked
+              ? t("reader", "removeBookmark")
+              : t("reader", "addBookmark")
+          }
           type="button"
         >
           {bookmarked ? <BookmarkCheck aria-hidden="true" size={17} /> : <Bookmark aria-hidden="true" size={17} />}

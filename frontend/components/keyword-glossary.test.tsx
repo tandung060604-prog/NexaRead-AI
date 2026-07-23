@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { KeywordDetail, KeywordOccurrence, KeywordPreferences } from "@/lib/documents-api";
+import { translate } from "@/lib/i18n";
 
 import { KeywordGlossary } from "./keyword-glossary";
 
@@ -69,8 +70,12 @@ describe("KeywordGlossary", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "ADV" }));
-    fireEvent.change(screen.getByLabelText("Category"), {
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "glossary.levels.ADVANCED"),
+    }));
+    fireEvent.change(screen.getByLabelText(
+      translate("vi", "reader", "glossary.category"),
+    ), {
       target: { value: "PROGRAMMING_LANGUAGE" },
     });
 
@@ -102,12 +107,20 @@ describe("KeywordGlossary", () => {
 
     expect(screen.getByText(detail.explanation)).toBeInTheDocument();
     expect(screen.getByText("FastAPI")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "1 · p.2" }));
-    fireEvent.click(screen.getByRole("button", { name: "Helpful" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: `1 · ${translate("vi", "reader", "sourcePage")} 2`,
+    }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "glossary.helpful"),
+    }));
 
     expect(onNavigate).toHaveBeenCalledWith(occurrence);
     await waitFor(() => expect(onFeedback).toHaveBeenCalledWith(occurrence, "HELPFUL"));
-    expect(await screen.findByText("Feedback saved")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        translate("vi", "reader", "glossary.feedbackSaved"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("renders an empty state without relying on color", () => {
@@ -126,7 +139,9 @@ describe("KeywordGlossary", () => {
       />,
     );
 
-    expect(screen.getByText("No technical terms match these settings.")).toBeInTheDocument();
+    expect(
+      screen.getByText(translate("vi", "reader", "glossary.empty")),
+    ).toBeInTheDocument();
   });
 
   it("recovers from a feedback request failure", async () => {
@@ -145,9 +160,17 @@ describe("KeywordGlossary", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Helpful" }));
+    fireEvent.click(screen.getByRole("button", {
+      name: translate("vi", "reader", "glossary.helpful"),
+    }));
 
-    expect(await screen.findByText("Feedback could not be saved")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Helpful" })).toBeEnabled();
+    expect(
+      await screen.findByText(
+        translate("vi", "reader", "glossary.feedbackFailed"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", {
+      name: translate("vi", "reader", "glossary.helpful"),
+    })).toBeEnabled();
   });
 });

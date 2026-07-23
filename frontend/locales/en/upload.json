@@ -1,0 +1,132 @@
+{
+  "title": "Upload document",
+  "eyebrow": "Add document",
+  "description": "Upload a PDF, DOCX, EPUB, or public article URL through a clear eight-step flow.",
+  "dropzone": "Drop a document here",
+  "dropzoneLabel": "Document upload dropzone",
+  "selectHint": "or select one from your computer",
+  "choose": "Choose document",
+  "chooseFileLabel": "Choose document file",
+  "fileLimit": "PDF, DOCX, or EPUB up to {size} MB",
+  "remove": "Remove",
+  "submit": "Upload document",
+  "uploading": "Uploading…",
+  "processingTitle": "Processing progress",
+  "openLibrary": "Open library",
+  "viewDetails": "View details",
+  "urlLabel": "Public article URL",
+  "import": "Import URL",
+  "wizard": {
+    "progressLabel": "Document upload progress",
+    "stepCount": "Step {current} of {total}",
+    "steps": {
+      "source": "Source",
+      "info": "Information",
+      "type": "Type",
+      "collection": "Collection",
+      "upload": "Upload",
+      "processing": "Processing",
+      "preview": "Preview",
+      "read": "Start reading"
+    }
+  },
+  "source": {
+    "title": "Choose a file or URL",
+    "modeLabel": "Document source type",
+    "file": "File on device",
+    "url": "Public URL",
+    "urlHint": "Enter a public HTTP or HTTPS URL only. Internal pages and private-network addresses are rejected.",
+    "publicUrl": "Public web page"
+  },
+  "trust": {
+    "formats": "Supports PDF, DOCX, and EPUB.",
+    "size": "Maximum size: {size} MB.",
+    "privacy": "Only you can access documents in your account."
+  },
+  "info": {
+    "title": "Review source information",
+    "source": "Source",
+    "kind": "Format",
+    "size": "Size",
+    "visibility": "Privacy",
+    "fetchedSecurely": "Checked during import",
+    "safety": "NexaRead checks file type, size limits, and ownership before a document enters processing."
+  },
+  "type": {
+    "title": "Choose a document type",
+    "description": "Let NexaRead detect the type or choose one to apply an appropriate reading layout from the start.",
+    "label": "Document type",
+    "auto": "Detect automatically",
+    "options": {
+      "BOOK": "Book",
+      "TEXTBOOK": "Textbook",
+      "LECTURE": "Lecture",
+      "RESEARCH_PAPER": "Research paper",
+      "THESIS": "Thesis",
+      "TECHNICAL": "Technical documentation",
+      "REPORT": "Report",
+      "LEGAL": "Legal document",
+      "WORK": "Work document",
+      "WEB_ARTICLE": "Web article",
+      "OTHER": "Other"
+    }
+  },
+  "collection": {
+    "title": "Choose a collection",
+    "description": "This step is optional. You can reorganize the document later in the library.",
+    "label": "Collection",
+    "none": "No collection",
+    "unavailable": "Collections could not be loaded. You can continue and organize the document later."
+  },
+  "review": {
+    "title": "Confirm and upload"
+  },
+  "processing": {
+    "title": "NexaRead is processing your document",
+    "description": "The file is stored in your private library. Extraction, layout, and indexing are running.",
+    "safeToLeave": "You can leave this page; processing status remains available from your dashboard and library."
+  },
+  "preview": {
+    "title": "Preview the result",
+    "type": "Applied type",
+    "language": "Language",
+    "pages": "Source pages",
+    "chapters": "Chapters/sections",
+    "warnings": "Processing notes",
+    "original": "Original",
+    "openOriginal": "Open original"
+  },
+  "ocr": {
+    "title": "This scan needs OCR",
+    "description": "NexaRead could not extract enough text from this file. The original remains available for review.",
+    "step1": "Open the original and confirm that it is a scanned or image-only PDF.",
+    "step2": "Run OCR with a tool you trust to create a PDF with a text layer.",
+    "step3": "Upload the text-layer file; you do not need to delete the original first."
+  },
+  "failed": {
+    "title": "Processing could not finish",
+    "description": "Check the format, try another copy, or open the original to confirm its contents."
+  },
+  "ready": {
+    "title": "Your document is ready",
+    "description": "“{title}” has been processed and is ready in the reader.",
+    "startReading": "Start reading"
+  },
+  "actions": {
+    "back": "Back",
+    "continue": "Continue",
+    "review": "Review before upload",
+    "addAnother": "Add another document",
+    "continueToRead": "Continue to reading"
+  },
+  "validation": {
+    "type": "Choose a PDF, DOCX, or EPUB file.",
+    "empty": "The document file is empty.",
+    "size": "The document must be {size} MB or smaller.",
+    "required": "Choose a PDF, DOCX, or EPUB file before continuing.",
+    "url": "Enter a valid public HTTP or HTTPS URL.",
+    "uploadFailed": "Upload failed.",
+    "importFailed": "URL import failed.",
+    "guidance": "Check the source, format, and size, then try again. If the error continues, keep this message for troubleshooting."
+  }
+}

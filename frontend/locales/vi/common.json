@@ -1,0 +1,64 @@
+{
+  "brand": "NexaRead",
+  "nav": {
+    "public": "Điều hướng công khai",
+    "primary": "Điều hướng chính",
+    "mobilePrimary": "Điều hướng ứng dụng trên di động",
+    "dashboard": "Tổng quan",
+    "library": "Thư viện",
+    "upload": "Tải tài liệu",
+    "account": "Tài khoản",
+    "login": "Đăng nhập",
+    "register": "Bắt đầu miễn phí",
+    "logout": "Đăng xuất"
+  },
+  "locale": {
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English",
+    "updating": "Đang đổi ngôn ngữ…"
+  },
+  "account": {
+    "title": "Tài khoản",
+    "email": "Email",
+    "loading": "Đang tải tài khoản…",
+    "preferredLanguage": "Ngôn ngữ ưu tiên",
+    "manageSessions": "Quản lý phiên đăng nhập",
+    "security": "Bảo mật",
+    "sessions": "Phiên đăng nhập",
+    "sessionsDescription": "Xem và thu hồi các thiết bị đang truy cập tài khoản của bạn.",
+    "loadingSessions": "Đang tải phiên đăng nhập…",
+    "currentDevice": "Thiết bị hiện tại",
+    "otherSession": "Phiên đăng nhập",
+    "unknownDevice": "Không có thông tin thiết bị",
+    "expires": "Hết hạn {date}",
+    "revokeCurrent": "Thu hồi thiết bị hiện tại",
+    "revokeSession": "Thu hồi phiên đăng nhập",
+    "revokeAll": "Thu hồi tất cả phiên"
+  },
+  "status": {
+    "loading": "Đang tải…",
+    "saving": "Đang lưu",
+    "saved": "Đã lưu",
+    "failed": "Thất bại",
+    "authenticating": "Đang xác thực…"
+  },
+  "actions": {
+    "open": "Mở",
+    "close": "Đóng",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "retry": "Thử lại",
+    "confirm": "Xác nhận"
+  },
+  "accessibility": {
+    "skipToContent": "Bỏ qua điều hướng, đến nội dung chính"
+  },
+  "health": {
+    "eyebrow": "Trạng thái hệ thống",
+    "title": "Frontend đang hoạt động",
+    "application": "Ứng dụng Next.js",
+    "healthy": "Hoạt động tốt"
+  }
+}

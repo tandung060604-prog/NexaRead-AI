@@ -46,6 +46,8 @@ export type ReadingRoom = {
   theme: RoomTheme;
   /** CSS accent color used for buttons and highlights inside this room. */
   accent: string;
+  /** Text color that reaches WCAG AA on top of the room accent. */
+  accentForeground: string;
   /** Opacity 0–1 of the dark overlay between background and content. */
   overlayOpacity: number;
   motionIntensity: MotionIntensity;
@@ -89,6 +91,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "var(--reader-background)",
     theme: "light",
     accent: "#116b4b",
+    accentForeground: "#ffffff",
     overlayOpacity: 0,
     motionIntensity: "none",
     pageColor: "#ffffff",
@@ -111,6 +114,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(135deg, #1a1410 0%, #2a2218 50%, #1e1812 100%)",
     theme: "sepia",
     accent: "#d4a574",
+    accentForeground: "#111111",
     overlayOpacity: 0.55,
     motionIntensity: "low",
     pageColor: "#faf5ec",
@@ -141,6 +145,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(180deg, #2c3e50 0%, #1a252f 60%, #0d1b2a 100%)",
     theme: "dark",
     accent: "#7eb8da",
+    accentForeground: "#111111",
     overlayOpacity: 0.5,
     motionIntensity: "low",
     pageColor: "#f5f5f5",
@@ -171,6 +176,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(135deg, #2d1b4e 0%, #1a1230 50%, #0d0a1a 100%)",
     theme: "dark",
     accent: "#e8a87c",
+    accentForeground: "#111111",
     overlayOpacity: 0.5,
     motionIntensity: "low",
     pageColor: "#faf8f4",
@@ -208,6 +214,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(180deg, #e8f5f0 0%, #d0ebe4 50%, #b8e0d8 100%)",
     theme: "light",
     accent: "#5ba68a",
+    accentForeground: "#111111",
     overlayOpacity: 0.3,
     motionIntensity: "low",
     pageColor: "#fafefa",
@@ -238,6 +245,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%)",
     theme: "light",
     accent: "#3b82f6",
+    accentForeground: "#111111",
     overlayOpacity: 0.45,
     motionIntensity: "low",
     pageColor: "#ffffff",
@@ -268,6 +276,7 @@ export const READING_ROOMS: ReadingRoom[] = [
     posterFallback: "linear-gradient(180deg, #0a0a1a 0%, #141428 50%, #1e1e3c 100%)",
     theme: "dark",
     accent: "#a78bfa",
+    accentForeground: "#111111",
     overlayOpacity: 0.5,
     motionIntensity: "low",
     pageColor: "#f0f0f0",

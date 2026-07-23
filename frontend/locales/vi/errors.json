@@ -1,0 +1,12 @@
+{
+  "REQUEST_FAILED": "Không thể hoàn tất yêu cầu.",
+  "AUTH_EMAIL_ALREADY_EXISTS": "Email này đã được sử dụng.",
+  "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không đúng.",
+  "AUTH_RATE_LIMITED": "Bạn thử quá nhiều lần. Vui lòng đợi một phút.",
+  "AUTH_RATE_LIMIT_UNAVAILABLE": "Dịch vụ đăng nhập đang bận. Vui lòng thử lại.",
+  "AUTH_REQUIRED": "Vui lòng đăng nhập để tiếp tục.",
+  "AUTH_SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "AUTH_SESSION_REVOKED": "Phiên đăng nhập này đã bị thu hồi.",
+  "AUTH_CSRF_INVALID": "Yêu cầu bảo mật không hợp lệ. Vui lòng tải lại trang.",
+  "UNKNOWN": "Đã xảy ra lỗi. Vui lòng thử lại."
+}

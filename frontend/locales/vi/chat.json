@@ -1,0 +1,13 @@
+{
+  "title": "Trợ lý AI",
+  "sectionLabel": "Hỏi đáp với tài liệu",
+  "description": "Câu trả lời dựa trên tài liệu này và luôn kèm liên kết nguồn.",
+  "questionLabel": "Đặt câu hỏi về tài liệu này",
+  "placeholder": "Hỏi về tài liệu này…",
+  "send": "Hỏi",
+  "checking": "Đang kiểm tra nguồn…",
+  "sources": "Nguồn trích dẫn",
+  "sourcePage": "trang {page}",
+  "failed": "Không thể hỏi đáp với tài liệu.",
+  "noAnswer": "Không tìm thấy đủ bằng chứng trong tài liệu để trả lời."
+}

@@ -27,7 +27,7 @@ export class PageTurnSound {
   private poolIndex = 0;
   private lastPlayTime = 0;
   private volume = 0.6;
-  private enabled = true;
+  private enabled = false;
   private muted = false;
   private userInteracted = false;
 
@@ -37,7 +37,7 @@ export class PageTurnSound {
     // Pre-create audio elements for each variant
     this.audioPool = PAGE_TURN_VARIANTS.map((src) => {
       const audio = new Audio();
-      audio.preload = "auto";
+      audio.preload = "none";
       audio.src = src;
       audio.volume = 0;
       return audio;
@@ -89,6 +89,9 @@ export class PageTurnSound {
   /** Mute or unmute (follows master mute). */
   setMuted(muted: boolean): void {
     this.muted = muted;
+    if (muted) {
+      this.audioPool.forEach((audio) => audio.pause());
+    }
   }
 
   /** Release audio resources. */

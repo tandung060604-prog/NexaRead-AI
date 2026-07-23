@@ -1,0 +1,191 @@
+{
+  "nav": {
+    "product": "Sản phẩm",
+    "features": "Tính năng",
+    "how": "Cách hoạt động",
+    "audience": "Dành cho ai",
+    "privacy": "Bảo mật",
+    "faq": "Câu hỏi thường gặp",
+    "openMenu": "Mở menu",
+    "closeMenu": "Đóng menu",
+    "mobile": "Điều hướng công khai trên di động"
+  },
+  "theme": {
+    "light": "Chuyển sang giao diện sáng",
+    "dark": "Chuyển sang giao diện tối"
+  },
+  "heroTitle": "Đọc tài liệu dài dễ dàng hơn. Hiểu nhanh hơn. Ghi nhớ lâu hơn.",
+  "heroSubtitle": "NexaRead biến PDF, giáo trình và tài liệu kỹ thuật thành trải nghiệm đọc sạch, có mục lục, ghi chú, tìm kiếm và trợ lý AI luôn dẫn lại nguồn.",
+  "primaryCta": "Bắt đầu thư viện của bạn",
+  "secondaryCta": "Xem trải nghiệm đọc",
+  "badge": "Không gian đọc và tri thức có căn cứ",
+  "heroProof": {
+    "formats": "PDF, DOCX, EPUB",
+    "citations": "AI có trích dẫn",
+    "private": "Thư viện theo tài khoản"
+  },
+  "preview": {
+    "label": "Bản xem trước trình đọc NexaRead",
+    "readerMode": "Chế độ sách",
+    "contents": "Mục lục",
+    "introduction": "Mở đầu",
+    "retrieval": "Truy xuất",
+    "evaluation": "Đánh giá",
+    "progress": "Tiến độ đọc",
+    "chapter": "Chương 03 · Thiết kế hệ thống",
+    "documentTitle": "Xây dựng RAG đáng tin cậy",
+    "paragraphBefore": "Một hệ thống hỏi đáp tốt không chỉ tạo câu trả lời trôi chảy. Nó phải",
+    "highlight": "giữ được liên kết rõ ràng giữa phát biểu và bằng chứng nguồn",
+    "paragraphAfter": "để người đọc có thể tự kiểm tra kết luận.",
+    "quote": "Chất lượng truy xuất quyết định giới hạn trên của câu trả lời có căn cứ.",
+    "sourcePage": "Nguồn · Trang 47",
+    "assistant": "Trợ lý có nguồn",
+    "answer": "Hệ thống ưu tiên các đoạn có liên quan, sau đó chỉ trả lời khi bằng chứng vượt ngưỡng tin cậy.",
+    "citation": "Mở trích dẫn · Trang 47",
+    "noteSaved": "Đã lưu ghi chú",
+    "vietnameseReady": "Sẵn sàng cho tiếng Việt"
+  },
+  "problem": {
+    "eyebrow": "Vấn đề quen thuộc",
+    "title": "Tài liệu quan trọng không nên khó đọc và khó kiểm chứng.",
+    "description": "File dài thường được thiết kế để in, không phải để học và tra cứu trên nhiều màn hình.",
+    "items": {
+      "longPdf": {
+        "title": "PDF dài gây mệt",
+        "description": "Cuộn hàng trăm trang khiến bạn mất vị trí, ngữ cảnh và nhịp đọc."
+      },
+      "brokenLayout": {
+        "title": "Bố cục dễ vỡ",
+        "description": "Cột, heading và khoảng cách khó theo dõi trên laptop nhỏ hoặc điện thoại."
+      },
+      "lostKnowledge": {
+        "title": "Khó tìm lại ý quan trọng",
+        "description": "Highlight và ghi chú rời rạc khiến kiến thức vừa đọc nhanh chóng biến mất."
+      },
+      "ungroundedAi": {
+        "title": "AI có thể thiếu căn cứ",
+        "description": "Một câu trả lời tự tin vẫn vô ích nếu bạn không thể trở lại đúng đoạn nguồn."
+      }
+    }
+  },
+  "how": {
+    "eyebrow": "Ba bước rõ ràng",
+    "title": "Từ tài liệu thô đến trải nghiệm đọc có cấu trúc.",
+    "description": "NexaRead giữ bản gốc, tạo lớp đọc sạch và nối mọi câu trả lời AI về bằng chứng.",
+    "steps": {
+      "upload": {
+        "title": "Tải tài liệu lên",
+        "description": "Thêm PDF, DOCX, EPUB hoặc URL bài viết công khai vào thư viện riêng."
+      },
+      "structure": {
+        "title": "NexaRead sắp xếp bố cục",
+        "description": "Heading, đoạn văn, mục lục và thứ tự đọc được tái dựng mà vẫn giữ neo nguồn."
+      },
+      "learn": {
+        "title": "Đọc, ghi chú và hỏi AI",
+        "description": "Tìm kiếm, highlight, lưu note và mở trực tiếp trích dẫn của câu trả lời."
+      }
+    }
+  },
+  "features": {
+    "eyebrow": "Một nơi để đọc sâu",
+    "title": "Đủ công cụ để hiểu, không thêm nhiễu.",
+    "description": "Mỗi tính năng phục vụ một việc: giữ nhịp đọc, lưu suy nghĩ và kiểm tra nguồn.",
+    "items": {
+      "book": {
+        "title": "Trải nghiệm đọc như sách",
+        "description": "Chế độ một hoặc hai trang, mục lục và tiến độ được đo theo không gian thật."
+      },
+      "layout": {
+        "title": "Làm sạch bố cục",
+        "description": "Tách source text khỏi display text để cải thiện trình bày mà không làm mất dấu nguồn."
+      },
+      "citations": {
+        "title": "AI có trích dẫn",
+        "description": "Câu trả lời liên kết đến trang, section và đoạn văn đã dùng làm bằng chứng."
+      },
+      "private": {
+        "title": "Thư viện riêng tư",
+        "description": "API kiểm tra tài khoản sở hữu trước khi đọc, tìm kiếm, tải xuống hoặc hỏi AI."
+      },
+      "notes": {
+        "title": "Highlight và note",
+        "description": "Đánh dấu ý quan trọng, thêm ghi chú và trở lại đúng block nội dung."
+      },
+      "devices": {
+        "title": "Đọc tiếp trên mọi thiết bị",
+        "description": "Tiến độ và tùy chọn đọc được lưu theo tài khoản để tiếp tục đúng vị trí."
+      }
+    }
+  },
+  "audience": {
+    "eyebrow": "Dành cho người đọc nghiêm túc",
+    "title": "Kiến thức dài, công việc thật, ít thời gian.",
+    "description": "NexaRead phù hợp với những ai phải hiểu và quay lại tài liệu thường xuyên.",
+    "items": {
+      "student": "Sinh viên",
+      "researcher": "Người nghiên cứu",
+      "engineer": "Kỹ sư",
+      "professional": "Người đi làm",
+      "learner": "Người tự học"
+    }
+  },
+  "privacy": {
+    "title": "Riêng tư được thực thi trong sản phẩm.",
+    "description": "Chúng tôi chỉ nêu những kiểm soát đã có trong hệ thống: xác thực, kiểm tra quyền sở hữu và truy xuất nguồn.",
+    "items": {
+      "account": {
+        "title": "Phiên đăng nhập bảo mật",
+        "description": "Phiên dùng cookie HttpOnly và có thể được xem hoặc thu hồi từ tài khoản."
+      },
+      "ownership": {
+        "title": "Cô lập dữ liệu theo người dùng",
+        "description": "Document, collection, annotation, tìm kiếm và RAG đều được lọc theo chủ sở hữu."
+      },
+      "original": {
+        "title": "Bản gốc luôn có thể kiểm tra",
+        "description": "Tệp gốc được phục vụ qua endpoint riêng tư sau khi xác minh tài khoản."
+      },
+      "citations": {
+        "title": "Neo nguồn ổn định",
+        "description": "Lớp hiển thị không thay thế source text dùng cho tìm kiếm, bằng chứng và citation."
+      }
+    }
+  },
+  "faq": {
+    "eyebrow": "Câu hỏi thường gặp",
+    "title": "Những điều cần biết trước khi bắt đầu.",
+    "description": "Câu trả lời phản ánh đúng khả năng hiện tại của NexaRead.",
+    "items": {
+      "formats": {
+        "question": "NexaRead hỗ trợ loại file nào?",
+        "answer": "Bạn có thể tải PDF, DOCX, EPUB hoặc nhập một URL bài viết HTTP/HTTPS công khai. Giới hạn dung lượng được hiển thị ngay trong wizard tải lên."
+      },
+      "privacy": {
+        "question": "Tài liệu có riêng tư không?",
+        "answer": "Có. Các luồng đọc, tìm kiếm, annotation, download và hỏi AI đều yêu cầu phiên đăng nhập và kiểm tra chủ sở hữu tài liệu."
+      },
+      "hallucination": {
+        "question": "AI có thể bịa không?",
+        "answer": "Mọi mô hình đều có rủi ro sai. NexaRead giảm rủi ro bằng ngưỡng bằng chứng, câu trả lời không-đủ-thông-tin và citation do backend kiểm tra để bạn tự xác minh."
+      },
+      "scan": {
+        "question": "Có đọc được file scan không?",
+        "answer": "OCR chưa được hỗ trợ. PDF chỉ có ảnh sẽ được đánh dấu OCR_REQUIRED, giữ nguyên bản gốc và hướng dẫn bạn tạo lại PDF có lớp văn bản."
+      },
+      "vietnamese": {
+        "question": "Có dùng được tiếng Việt không?",
+        "answer": "Có. Giao diện ưu tiên tiếng Việt và pipeline có nhận diện, tái dựng đoạn văn cùng quy tắc heading dành cho nội dung tiếng Việt."
+      },
+      "original": {
+        "question": "Có thể xem lại bản gốc không?",
+        "answer": "Có. Bản gốc luôn có đường dẫn riêng tư để mở sau khi hệ thống xác minh quyền sở hữu."
+      }
+    }
+  },
+  "finalCta": {
+    "title": "Biến tài liệu tiếp theo của bạn thành một cuốn sách dễ đọc.",
+    "description": "Tạo thư viện riêng, giữ nguồn trong tầm tay và dành nhiều thời gian hơn cho việc hiểu."
+  },
+  "footer": "Đọc sâu hơn. Kiểm chứng nhanh hơn."
+}

@@ -1,0 +1,132 @@
+{
+  "title": "Tải tài liệu",
+  "eyebrow": "Thêm tài liệu",
+  "description": "Tải PDF, DOCX, EPUB hoặc nhập URL bài viết công khai theo quy trình tám bước rõ ràng.",
+  "dropzone": "Kéo thả tài liệu vào đây",
+  "dropzoneLabel": "Khu vực tải tài liệu",
+  "selectHint": "hoặc chọn tệp từ máy tính",
+  "choose": "Chọn tài liệu",
+  "chooseFileLabel": "Chọn tệp tài liệu",
+  "fileLimit": "PDF, DOCX hoặc EPUB tối đa {size} MB",
+  "remove": "Bỏ tệp",
+  "submit": "Tải tài liệu lên",
+  "uploading": "Đang tải lên…",
+  "processingTitle": "Tiến trình xử lý",
+  "openLibrary": "Mở thư viện",
+  "viewDetails": "Xem chi tiết",
+  "urlLabel": "URL bài viết công khai",
+  "import": "Nhập URL",
+  "wizard": {
+    "progressLabel": "Tiến trình tải tài liệu",
+    "stepCount": "Bước {current} / {total}",
+    "steps": {
+      "source": "Nguồn",
+      "info": "Thông tin",
+      "type": "Loại",
+      "collection": "Bộ sưu tập",
+      "upload": "Tải lên",
+      "processing": "Xử lý",
+      "preview": "Xem trước",
+      "read": "Bắt đầu đọc"
+    }
+  },
+  "source": {
+    "title": "Chọn tệp hoặc URL",
+    "modeLabel": "Loại nguồn tài liệu",
+    "file": "Tệp trên máy",
+    "url": "URL công khai",
+    "urlHint": "Chỉ nhập URL HTTP hoặc HTTPS công khai. Trang nội bộ và địa chỉ mạng riêng sẽ bị từ chối.",
+    "publicUrl": "Trang web công khai"
+  },
+  "trust": {
+    "formats": "Hỗ trợ PDF, DOCX và EPUB.",
+    "size": "Dung lượng tối đa {size} MB.",
+    "privacy": "Chỉ bạn có thể truy cập tài liệu trong tài khoản của mình."
+  },
+  "info": {
+    "title": "Kiểm tra thông tin nguồn",
+    "source": "Nguồn",
+    "kind": "Định dạng",
+    "size": "Dung lượng",
+    "visibility": "Quyền riêng tư",
+    "fetchedSecurely": "Được kiểm tra khi nhập",
+    "safety": "NexaRead kiểm tra loại tệp, giới hạn dung lượng và quyền sở hữu trước khi đưa tài liệu vào quy trình xử lý."
+  },
+  "type": {
+    "title": "Chọn loại tài liệu",
+    "description": "Bạn có thể để NexaRead tự nhận diện hoặc chọn loại để áp dụng bố cục đọc phù hợp ngay từ đầu.",
+    "label": "Loại tài liệu",
+    "auto": "Tự động nhận diện",
+    "options": {
+      "BOOK": "Sách",
+      "TEXTBOOK": "Giáo trình",
+      "LECTURE": "Bài giảng",
+      "RESEARCH_PAPER": "Bài báo nghiên cứu",
+      "THESIS": "Luận văn",
+      "TECHNICAL": "Tài liệu kỹ thuật",
+      "REPORT": "Báo cáo",
+      "LEGAL": "Văn bản pháp lý",
+      "WORK": "Tài liệu công việc",
+      "WEB_ARTICLE": "Bài viết web",
+      "OTHER": "Loại khác"
+    }
+  },
+  "collection": {
+    "title": "Chọn bộ sưu tập",
+    "description": "Bước này không bắt buộc. Bạn có thể sắp xếp lại tài liệu sau trong thư viện.",
+    "label": "Bộ sưu tập",
+    "none": "Chưa xếp vào bộ sưu tập",
+    "unavailable": "Chưa tải được danh sách bộ sưu tập. Bạn vẫn có thể tiếp tục và sắp xếp tài liệu sau."
+  },
+  "review": {
+    "title": "Xác nhận và tải lên"
+  },
+  "processing": {
+    "title": "NexaRead đang xử lý tài liệu",
+    "description": "Tệp đã được lưu trong thư viện riêng của bạn. Các bước trích xuất, sắp xếp bố cục và lập chỉ mục đang chạy.",
+    "safeToLeave": "Bạn có thể rời trang này; trạng thái xử lý vẫn hiển thị trong dashboard và thư viện."
+  },
+  "preview": {
+    "title": "Xem trước kết quả",
+    "type": "Loại đã áp dụng",
+    "language": "Ngôn ngữ",
+    "pages": "Trang nguồn",
+    "chapters": "Chương/phần",
+    "warnings": "Lưu ý xử lý",
+    "original": "Bản gốc",
+    "openOriginal": "Mở bản gốc"
+  },
+  "ocr": {
+    "title": "Tệp scan cần nhận dạng OCR",
+    "description": "NexaRead chưa thể trích xuất đủ văn bản từ tệp này. Bản gốc vẫn được giữ để bạn kiểm tra.",
+    "step1": "Mở bản gốc để xác nhận đây là PDF scan hoặc ảnh.",
+    "step2": "Chạy OCR bằng công cụ bạn tin cậy để tạo PDF có lớp văn bản.",
+    "step3": "Tải lại tệp đã có lớp văn bản; không cần xóa bản gốc trước."
+  },
+  "failed": {
+    "title": "Không thể hoàn tất xử lý",
+    "description": "Hãy kiểm tra định dạng, thử lại với bản tệp khác hoặc mở bản gốc để xác nhận nội dung."
+  },
+  "ready": {
+    "title": "Tài liệu đã sẵn sàng",
+    "description": "“{title}” đã được xử lý và có thể mở trong trình đọc.",
+    "startReading": "Bắt đầu đọc"
+  },
+  "actions": {
+    "back": "Quay lại",
+    "continue": "Tiếp tục",
+    "review": "Xem lại trước khi tải",
+    "addAnother": "Thêm tài liệu khác",
+    "continueToRead": "Tiếp tục để đọc"
+  },
+  "validation": {
+    "type": "Hãy chọn tệp PDF, DOCX hoặc EPUB.",
+    "empty": "Tệp tài liệu đang trống.",
+    "size": "Tài liệu phải có dung lượng không quá {size} MB.",
+    "required": "Hãy chọn tệp PDF, DOCX hoặc EPUB trước khi tiếp tục.",
+    "url": "Hãy nhập URL HTTP hoặc HTTPS công khai hợp lệ.",
+    "uploadFailed": "Tải tài liệu thất bại.",
+    "importFailed": "Nhập URL thất bại.",
+    "guidance": "Kiểm tra nguồn, định dạng và dung lượng rồi thử lại. Nếu lỗi tiếp diễn, giữ nguyên thông báo này để chẩn đoán."
+  }
+}

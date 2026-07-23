@@ -1,0 +1,76 @@
+{
+  "onboarding": {
+    "eyebrow": "Thiết lập cá nhân",
+    "title": "Bạn thường đọc để làm gì?",
+    "description": "Ba bước ngắn giúp NexaRead đề xuất không gian đọc phù hợp. Bạn có thể thay đổi thiết lập sau.",
+    "loading": "Đang tải thiết lập",
+    "progress": "Bước {current} / {total}",
+    "skip": "Bỏ qua thiết lập",
+    "skipping": "Đang bỏ qua…",
+    "back": "Quay lại",
+    "next": "Tiếp tục",
+    "complete": "Hoàn tất",
+    "saving": "Đang lưu…",
+    "error": "Không thể lưu thiết lập. Vui lòng thử lại.",
+    "steps": {
+      "typesTitle": "Bạn thường đọc loại tài liệu nào?",
+      "typesDescription": "Có thể chọn nhiều loại.",
+      "goalTitle": "Mục tiêu đọc chính của bạn là gì?",
+      "goalDescription": "Lựa chọn này giúp ưu tiên công cụ phù hợp.",
+      "displayTitle": "Bạn thích cách trình bày nào?",
+      "displayDescription": "Chế độ tự động sẽ điều chỉnh theo từng loại tài liệu."
+    },
+    "types": {
+      "STUDY": "Học tập",
+      "RESEARCH": "Nghiên cứu",
+      "WORK": "Công việc",
+      "BOOKS": "Đọc sách",
+      "TECHNICAL": "Tài liệu kỹ thuật"
+    },
+    "goals": {
+      "UNDERSTAND": "Hiểu sâu nội dung",
+      "REMEMBER": "Ghi nhớ kiến thức",
+      "REFERENCE": "Tra cứu nhanh",
+      "COMPLETE": "Hoàn thành tài liệu"
+    },
+    "displays": {
+      "AUTO": {
+        "title": "Tự động theo tài liệu",
+        "description": "Sách, bài nghiên cứu và tài liệu kỹ thuật có bố cục riêng."
+      },
+      "BOOK": {
+        "title": "Chế độ sách",
+        "description": "Trang đọc thoáng, phông serif và sắc giấy dịu."
+      },
+      "CLEAN": {
+        "title": "Sạch và tập trung",
+        "description": "Một cột rõ ràng, giảm tối đa yếu tố gây xao nhãng."
+      },
+      "STUDY": {
+        "title": "Học tập",
+        "description": "Ưu tiên công cụ ghi chú, tra cứu và dẫn nguồn."
+      }
+    },
+    "analytics": {
+      "title": "Thống kê đọc tối giản",
+      "description": "Tùy chọn. Chỉ lưu tổng thời gian theo ngày, tiến độ và chuỗi ngày đọc; không lưu luồng hành vi chi tiết."
+    }
+  },
+  "analytics": {
+    "title": "Nhịp đọc của bạn",
+    "description": "Thống kê tổng hợp giúp bạn nhìn lại tiến độ mà không tạo áp lực.",
+    "enable": "Bật thống kê đọc",
+    "disable": "Tắt và xóa thống kê",
+    "updating": "Đang cập nhật…",
+    "disabled": "Thống kê đang tắt. NexaRead không lưu tổng thời gian đọc theo ngày.",
+    "privacy": "Chỉ dữ liệu tổng hợp theo ngày được lưu. Bạn có thể tắt và xóa bất cứ lúc nào.",
+    "error": "Không thể cập nhật thống kê.",
+    "time": "Thời gian đọc",
+    "streak": "Chuỗi ngày đọc",
+    "pages": "Trang nguồn đã đọc",
+    "completed": "Tài liệu hoàn thành",
+    "days": "{count} ngày",
+    "hoursMinutes": "{hours} giờ {minutes} phút",
+    "minutes": "{minutes} phút"
+  }
+}

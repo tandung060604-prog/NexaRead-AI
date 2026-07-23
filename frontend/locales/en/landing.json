@@ -1,0 +1,191 @@
+{
+  "nav": {
+    "product": "Product",
+    "features": "Features",
+    "how": "How it works",
+    "audience": "Who it is for",
+    "privacy": "Security",
+    "faq": "FAQ",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "mobile": "Public mobile navigation"
+  },
+  "theme": {
+    "light": "Switch to light theme",
+    "dark": "Switch to dark theme"
+  },
+  "heroTitle": "Read long documents more easily. Understand faster. Remember longer.",
+  "heroSubtitle": "NexaRead turns PDFs, textbooks, and technical documents into a clean reading experience with navigation, notes, search, and source-grounded AI.",
+  "primaryCta": "Start your library",
+  "secondaryCta": "See the reading experience",
+  "badge": "A grounded reading and knowledge workspace",
+  "heroProof": {
+    "formats": "PDF, DOCX, EPUB",
+    "citations": "Cited AI answers",
+    "private": "Account-scoped library"
+  },
+  "preview": {
+    "label": "NexaRead reader product preview",
+    "readerMode": "Book mode",
+    "contents": "Contents",
+    "introduction": "Introduction",
+    "retrieval": "Retrieval",
+    "evaluation": "Evaluation",
+    "progress": "Reading progress",
+    "chapter": "Chapter 03 · System design",
+    "documentTitle": "Building reliable RAG",
+    "paragraphBefore": "A useful question-answering system does more than produce fluent text. It must",
+    "highlight": "preserve a clear link between each claim and its source evidence",
+    "paragraphAfter": "so readers can verify the conclusion themselves.",
+    "quote": "Retrieval quality sets the upper bound for a grounded answer.",
+    "sourcePage": "Source · Page 47",
+    "assistant": "Grounded assistant",
+    "answer": "The system prioritizes relevant passages, then answers only when evidence clears the configured confidence threshold.",
+    "citation": "Open citation · Page 47",
+    "noteSaved": "Note saved",
+    "vietnameseReady": "Vietnamese ready"
+  },
+  "problem": {
+    "eyebrow": "A familiar problem",
+    "title": "Important documents should not be hard to read or verify.",
+    "description": "Long files are often designed for print, not for learning and retrieval across screens.",
+    "items": {
+      "longPdf": {
+        "title": "Long PDFs are tiring",
+        "description": "Scrolling through hundreds of pages makes you lose position, context, and reading rhythm."
+      },
+      "brokenLayout": {
+        "title": "Layouts break easily",
+        "description": "Columns, headings, and spacing become difficult to follow on smaller laptops and phones."
+      },
+      "lostKnowledge": {
+        "title": "Key ideas get lost",
+        "description": "Disconnected highlights and notes make recently read knowledge disappear quickly."
+      },
+      "ungroundedAi": {
+        "title": "AI can lack evidence",
+        "description": "A confident answer is still unhelpful when you cannot return to the exact source passage."
+      }
+    }
+  },
+  "how": {
+    "eyebrow": "Three clear steps",
+    "title": "From a raw document to a structured reading experience.",
+    "description": "NexaRead preserves the original, creates a clean reading layer, and connects AI answers to evidence.",
+    "steps": {
+      "upload": {
+        "title": "Upload your document",
+        "description": "Add a PDF, DOCX, EPUB, or public article URL to your private library."
+      },
+      "structure": {
+        "title": "NexaRead structures the layout",
+        "description": "Headings, paragraphs, contents, and reading order are rebuilt while source anchors remain intact."
+      },
+      "learn": {
+        "title": "Read, annotate, and ask AI",
+        "description": "Search, highlight, save notes, and open the exact citations behind each answer."
+      }
+    }
+  },
+  "features": {
+    "eyebrow": "One place for deep reading",
+    "title": "Enough tools to understand, without the noise.",
+    "description": "Every capability serves one purpose: preserve reading flow, capture thinking, and verify the source.",
+    "items": {
+      "book": {
+        "title": "A book-like reader",
+        "description": "One- or two-page layouts, contents, and progress measured against real rendered space."
+      },
+      "layout": {
+        "title": "Clean document layout",
+        "description": "Source and display text remain separate so presentation can improve without losing provenance."
+      },
+      "citations": {
+        "title": "AI with citations",
+        "description": "Answers link to the page, section, and passage used as supporting evidence."
+      },
+      "private": {
+        "title": "A private library",
+        "description": "The API verifies account ownership before reading, searching, downloading, or asking AI."
+      },
+      "notes": {
+        "title": "Highlights and notes",
+        "description": "Mark important ideas, add notes, and return to the exact content block."
+      },
+      "devices": {
+        "title": "Continue across devices",
+        "description": "Reading progress and preferences are account-backed so you resume in the right place."
+      }
+    }
+  },
+  "audience": {
+    "eyebrow": "For serious readers",
+    "title": "Long knowledge, real work, limited time.",
+    "description": "NexaRead is for people who need to understand and return to documents often.",
+    "items": {
+      "student": "Students",
+      "researcher": "Researchers",
+      "engineer": "Engineers",
+      "professional": "Professionals",
+      "learner": "Independent learners"
+    }
+  },
+  "privacy": {
+    "title": "Privacy enforced in the product.",
+    "description": "We only describe controls that exist in the system: authentication, ownership checks, and source traceability.",
+    "items": {
+      "account": {
+        "title": "Secure sign-in sessions",
+        "description": "Sessions use HttpOnly cookies and can be reviewed or revoked from the account."
+      },
+      "ownership": {
+        "title": "Per-user data isolation",
+        "description": "Documents, collections, annotations, search, and RAG are all filtered by owner."
+      },
+      "original": {
+        "title": "The original stays verifiable",
+        "description": "Original files are served through a private endpoint after account verification."
+      },
+      "citations": {
+        "title": "Stable source anchors",
+        "description": "The display layer never replaces source text used by search, evidence, or citations."
+      }
+    }
+  },
+  "faq": {
+    "eyebrow": "Frequently asked questions",
+    "title": "What to know before you begin.",
+    "description": "These answers reflect NexaRead's current implemented capabilities.",
+    "items": {
+      "formats": {
+        "question": "Which file types does NexaRead support?",
+        "answer": "You can upload PDF, DOCX, and EPUB files or import one public HTTP/HTTPS article URL. The upload wizard displays the configured size limit."
+      },
+      "privacy": {
+        "question": "Are my documents private?",
+        "answer": "Yes. Reading, search, annotations, download, and AI flows require a signed-in session and verify document ownership."
+      },
+      "hallucination": {
+        "question": "Can the AI make things up?",
+        "answer": "Every model can be wrong. NexaRead reduces risk with evidence thresholds, not-enough-information behavior, and backend-validated citations so you can verify the source."
+      },
+      "scan": {
+        "question": "Can NexaRead read scanned files?",
+        "answer": "OCR is not supported yet. Image-only PDFs are marked OCR_REQUIRED, keep their original file, and include guidance for creating a text-layer PDF."
+      },
+      "vietnamese": {
+        "question": "Does it support Vietnamese?",
+        "answer": "Yes. The interface is Vietnamese-first, and the pipeline includes language detection, paragraph reconstruction, and heading rules for Vietnamese content."
+      },
+      "original": {
+        "question": "Can I view the original file?",
+        "answer": "Yes. The original remains available from a private endpoint after ownership is verified."
+      }
+    }
+  },
+  "finalCta": {
+    "title": "Turn your next document into a book that is easier to read.",
+    "description": "Build your private library, keep sources within reach, and spend more time understanding."
+  },
+  "footer": "Read deeper. Verify faster."
+}

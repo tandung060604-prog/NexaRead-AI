@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { useI18n } from "@/components/i18n-provider";
 import {
   Bookmark,
   ContentBlock,
@@ -45,17 +46,22 @@ export function ReaderSettings({
   preferences: ReadingPreferencesInput;
   onChange: (preferences: ReadingPreferencesInput) => void;
 }) {
+  const { t } = useI18n();
   return (
-    <div aria-label="Reading settings" className="flex flex-wrap items-center gap-2" role="toolbar">
+    <div
+      aria-label={t("reader", "settingsLabels.title")}
+      className="flex flex-wrap items-center gap-2"
+      role="toolbar"
+    >
       <div className="flex border border-[var(--reader-border)]">
         {(["light", "sepia", "dark"] as const).map((theme) => (
           <button
-            aria-label={`${theme} theme`}
+            aria-label={t("reader", `settingsLabels.${theme}`)}
             aria-pressed={preferences.theme === theme}
             className="grid size-9 place-items-center border-r border-[var(--reader-border)] last:border-0 aria-pressed:bg-[var(--reader-surface-muted)]"
             key={theme}
             onClick={() => onChange({ ...preferences, theme })}
-            title={`${theme[0].toUpperCase()}${theme.slice(1)} theme`}
+            title={t("reader", `settingsLabels.${theme}`)}
             type="button"
           >
             {theme === "dark" ? <Moon size={16} /> : theme === "light" ? <Sun size={16} /> : <span className="size-4 bg-[#d5c39a]" />}
@@ -63,30 +69,30 @@ export function ReaderSettings({
         ))}
       </div>
       <button
-        aria-label="Decrease font size"
+        aria-label={t("reader", "settingsLabels.decreaseFont")}
         className="grid size-9 place-items-center border border-[var(--reader-border)]"
         disabled={preferences.font_size <= 14}
         onClick={() => onChange({ ...preferences, font_size: preferences.font_size - 1 })}
-        title="Decrease font size"
+        title={t("reader", "settingsLabels.decreaseFont")}
         type="button"
       >
         <Minus size={16} />
       </button>
       <span className="w-8 text-center text-xs font-semibold">{preferences.font_size}</span>
       <button
-        aria-label="Increase font size"
+        aria-label={t("reader", "settingsLabels.increaseFont")}
         className="grid size-9 place-items-center border border-[var(--reader-border)]"
         disabled={preferences.font_size >= 28}
         onClick={() => onChange({ ...preferences, font_size: preferences.font_size + 1 })}
-        title="Increase font size"
+        title={t("reader", "settingsLabels.increaseFont")}
         type="button"
       >
         <Plus size={16} />
       </button>
       <label className="flex items-center gap-2 text-xs font-semibold">
-        Spacing
+        {t("reader", "settingsLabels.spacing")}
         <input
-          aria-label="Line height"
+          aria-label={t("reader", "settingsLabels.lineHeight")}
           className="w-20 accent-[var(--reader-accent)]"
           max="2.2"
           min="1.3"
@@ -97,9 +103,9 @@ export function ReaderSettings({
         />
       </label>
       <label className="flex items-center gap-2 text-xs font-semibold">
-        Width
+        {t("reader", "settingsLabels.width")}
         <input
-          aria-label="Reading width"
+          aria-label={t("reader", "settingsLabels.readingWidth")}
           className="w-20 accent-[var(--reader-accent)]"
           max="1000"
           min="520"
@@ -122,27 +128,28 @@ export function SelectionToolbar({
   onCreate: (color: HighlightColor) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [color, setColor] = useState<HighlightColor>("yellow");
   return (
-    <div className="fixed inset-x-3 bottom-5 z-50 mx-auto flex max-w-md items-center gap-3 border border-[var(--reader-border)] bg-[var(--reader-surface)] p-3 shadow-xl" role="dialog" aria-label="Create highlight">
+    <div className="fixed inset-x-3 bottom-5 z-50 mx-auto flex max-w-md items-center gap-3 border border-[var(--reader-border)] bg-[var(--reader-surface)] p-3 shadow-xl" role="dialog" aria-label={t("reader", "annotations.create")}>
       <p className="min-w-0 flex-1 truncate text-sm">{selection.selectedText}</p>
       <div className="flex gap-1">
         {HIGHLIGHT_COLORS.map((item) => (
           <button
-            aria-label={`${item} highlight`}
+            aria-label={`${t("reader", `annotations.colors.${item}`)} ${t("reader", "highlights")}`}
             aria-pressed={color === item}
             className="grid size-7 place-items-center border border-transparent aria-pressed:border-[var(--reader-foreground)]"
             key={item}
             onClick={() => setColor(item)}
-            title={`${item} highlight`}
+            title={t("reader", `annotations.colors.${item}`)}
             type="button"
           >
             <span className="size-4" style={{ backgroundColor: SWATCHES[item] }} />
           </button>
         ))}
       </div>
-      <button aria-label="Save highlight" className="grid size-8 place-items-center bg-[var(--reader-accent)] text-white" onClick={() => onCreate(color)} title="Save highlight" type="button"><Check size={16} /></button>
-      <button className="text-xs font-semibold" onClick={onCancel} type="button">Cancel</button>
+      <button aria-label={t("reader", "annotations.save")} className="grid size-8 place-items-center bg-[var(--reader-accent)] text-[var(--reader-accent-foreground)]" onClick={() => onCreate(color)} title={t("reader", "annotations.save")} type="button"><Check size={16} /></button>
+      <button className="text-xs font-semibold" onClick={onCancel} type="button">{t("reader", "annotations.cancel")}</button>
     </div>
   );
 }
@@ -171,6 +178,7 @@ function HighlightAnnotation({
   onSaveNote: (content: string) => Promise<void>;
   onDeleteNote: () => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState(highlight.note?.content ?? "");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
 
@@ -192,22 +200,28 @@ function HighlightAnnotation({
           <span className="mr-2 inline-block size-2" style={{ backgroundColor: SWATCHES[highlight.color] }} />
           {highlight.selected_text}
         </button>
-        <button aria-label="Delete highlight" className="grid size-7 place-items-center text-[var(--reader-muted)] hover:text-[var(--danger)]" onClick={onDelete} title="Delete highlight" type="button"><Trash2 size={15} /></button>
+        <button aria-label={t("reader", "annotations.deleteHighlight")} className="grid size-7 place-items-center text-[var(--reader-muted)] hover:text-[var(--danger)]" onClick={onDelete} title={t("reader", "annotations.deleteHighlight")} type="button"><Trash2 size={15} /></button>
       </div>
       <textarea
-        aria-label={`Note for ${highlight.selected_text}`}
+        aria-label={t("reader", "annotations.noteFor", { text: highlight.selected_text })}
         className="mt-3 min-h-20 w-full resize-y border border-[var(--reader-border)] bg-transparent p-2 text-sm"
         onChange={(event) => { setDraft(event.target.value); setSaveState("idle"); }}
-        placeholder="Add a note"
+        placeholder={t("reader", "annotations.notePlaceholder")}
         value={draft}
       />
       <div className="mt-2 flex items-center justify-between">
         <span className={`text-xs ${saveState === "failed" ? "text-[var(--danger)]" : "text-[var(--reader-muted)]"}`} role="status">
-          {saveState === "saving" ? "Saving" : saveState === "saved" ? "Saved" : saveState === "failed" ? "Failed" : ""}
+          {saveState === "saving"
+            ? t("common", "status.saving")
+            : saveState === "saved"
+              ? t("common", "status.saved")
+              : saveState === "failed"
+                ? t("common", "status.failed")
+                : ""}
         </span>
         <div className="flex gap-1">
-          {highlight.note ? <button aria-label="Delete note" className="grid size-8 place-items-center" onClick={() => void onDeleteNote()} title="Delete note" type="button"><Trash2 size={15} /></button> : null}
-          <button aria-label="Save note" className="grid size-8 place-items-center bg-[var(--reader-accent)] text-white disabled:opacity-40" disabled={!draft.trim()} onClick={() => void save()} title="Save note" type="button"><Save size={15} /></button>
+          {highlight.note ? <button aria-label={t("reader", "annotations.deleteNote")} className="grid size-8 place-items-center" onClick={() => void onDeleteNote()} title={t("reader", "annotations.deleteNote")} type="button"><Trash2 size={15} /></button> : null}
+          <button aria-label={t("reader", "annotations.saveNote")} className="grid size-8 place-items-center bg-[var(--reader-accent)] text-[var(--reader-accent-foreground)] disabled:opacity-40" disabled={!draft.trim()} onClick={() => void save()} title={t("reader", "annotations.saveNote")} type="button"><Save size={15} /></button>
         </div>
       </div>
     </li>
@@ -224,24 +238,25 @@ export function AnnotationPanel({
   onSaveNote,
   onDeleteNote,
 }: AnnotationPanelProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-7">
       <section>
-        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase text-[var(--reader-muted)]"><BookmarkIcon size={15} /> Bookmarks</h2>
-        {bookmarks.length === 0 ? <p className="mt-3 text-sm text-[var(--reader-muted)]">No bookmarks yet.</p> : (
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase text-[var(--reader-muted)]"><BookmarkIcon size={15} /> {t("reader", "annotations.bookmarks")}</h2>
+        {bookmarks.length === 0 ? <p className="mt-3 text-sm text-[var(--reader-muted)]">{t("reader", "annotations.noBookmarks")}</p> : (
           <ol className="mt-2">
             {bookmarks.map((bookmark) => (
               <li className="flex items-center border-b border-[var(--reader-border)] py-2" key={bookmark.id}>
                 <button className="min-w-0 flex-1 truncate text-left text-sm" onClick={() => onNavigate(bookmark.content_block_id)} type="button">{bookmark.title}</button>
-                <button aria-label={`Delete bookmark ${bookmark.title}`} className="grid size-7 place-items-center text-[var(--reader-muted)]" onClick={() => onDeleteBookmark(bookmark)} title="Delete bookmark" type="button"><Trash2 size={14} /></button>
+                <button aria-label={t("reader", "annotations.deleteBookmark", { title: bookmark.title })} className="grid size-7 place-items-center text-[var(--reader-muted)]" onClick={() => onDeleteBookmark(bookmark)} title={t("reader", "removeBookmark")} type="button"><Trash2 size={14} /></button>
               </li>
             ))}
           </ol>
         )}
       </section>
       <section>
-        <h2 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">Highlights & notes</h2>
-        {highlights.length === 0 ? <p className="mt-3 text-sm text-[var(--reader-muted)]">Select text in one block to start.</p> : (
+        <h2 className="text-xs font-semibold uppercase text-[var(--reader-muted)]">{t("reader", "annotations.highlights")}</h2>
+        {highlights.length === 0 ? <p className="mt-3 text-sm text-[var(--reader-muted)]">{t("reader", "annotations.noHighlights")}</p> : (
           <ol className="mt-2">
             {highlights.map((highlight) => (
               <HighlightAnnotation
