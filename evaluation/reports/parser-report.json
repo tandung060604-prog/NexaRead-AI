@@ -1,14 +1,14 @@
 {
   "dataset_version": "2026.07-m7-v1",
-  "generated_at": "2026-07-22T04:10:36.295875+00:00",
+  "generated_at": "2026-07-23T17:50:24.078330+00:00",
   "case_count": 3,
   "passed": 3,
   "metrics": {
     "success_rate": 1.0,
     "block_order_accuracy": 1.0,
-    "latency_p50_ms": 58.507,
-    "latency_max_ms": 60.802,
-    "total_latency_ms": 132.773
+    "latency_p50_ms": 101.904,
+    "latency_max_ms": 133.381,
+    "total_latency_ms": 266.49
   },
   "cases": [
     {
@@ -20,7 +20,7 @@
         "content_non_empty": true,
         "stable_sequences": true
       },
-      "latency_ms": 60.802
+      "latency_ms": 101.904
     },
     {
       "id": "epub",
@@ -31,7 +31,7 @@
         "content_non_empty": true,
         "stable_sequences": true
       },
-      "latency_ms": 58.507
+      "latency_ms": 133.381
     },
     {
       "id": "url",
@@ -42,7 +42,7 @@
         "content_non_empty": true,
         "stable_sequences": true
       },
-      "latency_ms": 13.411
+      "latency_ms": 31.092
     }
   ]
 }

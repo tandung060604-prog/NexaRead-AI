@@ -1,6 +1,6 @@
 {
   "dataset_version": "2026.07-v1",
-  "generated_at": "2026-07-22T04:10:30.056084+00:00",
+  "generated_at": "2026-07-23T17:50:14.609205+00:00",
   "provider": "local-hash-embedding-v1",
   "case_count": 8,
   "passed": 8,
@@ -12,8 +12,8 @@
     "faithfulness": 1.0,
     "answer_relevance": 0.5675,
     "no_answer_accuracy": 1.0,
-    "latency_p50_ms": 0.812,
-    "latency_p95_ms": 34.337,
+    "latency_p50_ms": 2.13,
+    "latency_p95_ms": 86.534,
     "prompt_tokens": 747,
     "completion_tokens": 95,
     "cost_microusd": 0
@@ -26,7 +26,7 @@
         "rag-hybrid",
         "rag-heading"
       ],
-      "latency_ms": 34.337
+      "latency_ms": 86.534
     },
     {
       "id": "rag-002",
@@ -35,19 +35,19 @@
         "rag-threshold",
         "rag-citation"
       ],
-      "latency_ms": 1.226
+      "latency_ms": 2.818
     },
     {
       "id": "rag-003",
       "passed": true,
       "retrieved_source_blocks": [],
-      "latency_ms": 0.91
+      "latency_ms": 2.53
     },
     {
       "id": "rag-004",
       "passed": true,
       "retrieved_source_blocks": [],
-      "latency_ms": 0.498
+      "latency_ms": 1.052
     },
     {
       "id": "rag-005",
@@ -55,7 +55,7 @@
       "retrieved_source_blocks": [
         "rag-threshold"
       ],
-      "latency_ms": 0.894
+      "latency_ms": 1.736
     },
     {
       "id": "rag-006",
@@ -63,7 +63,7 @@
       "retrieved_source_blocks": [
         "reader-block"
       ],
-      "latency_ms": 0.573
+      "latency_ms": 1.7
     },
     {
       "id": "rag-007",
@@ -72,13 +72,13 @@
         "reader-page",
         "reader-block"
       ],
-      "latency_ms": 0.555
+      "latency_ms": 2.524
     },
     {
       "id": "rag-008",
       "passed": true,
       "retrieved_source_blocks": [],
-      "latency_ms": 0.731
+      "latency_ms": 1.106
     }
   ]
 }
